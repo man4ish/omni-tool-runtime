@@ -5,14 +5,26 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "omni-tool-runtime"
 version = "0.1.0"
-description = "Portable tool runtime for OmniBioAI (AWS + Azure)"
+description = "Portable tool runtime for OmniBioAI TES (RESULT_URI uploader for s3:// and azureblob://)"
+readme = "README.md"
 requires-python = ">=3.10"
-
-dependencies = [
-  "boto3",
-  "azure-storage-blob",
-  "azure-identity",
+license = { text = "MIT" }
+authors = [{ name = "Manish Kumar" }]
+keywords = ["omnibioai", "tes", "bioinformatics", "batch", "azure", "aws"]
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent",
 ]
 
+dependencies = [
+  "pydantic>=2.0"
+]
+
+[project.optional-dependencies]
+aws = ["boto3>=1.26"]
+azure = ["azure-identity>=1.15", "azure-storage-blob>=12.19"]
+
 [tool.setuptools.packages.find]
+where = ["."]
 include = ["omni_tool_runtime*", "tools*"]
