@@ -55,6 +55,15 @@ def _parse_azureblob(uri: str) -> tuple[str, str, str]:
     return account, container, blob_path
 
 
+# assumes these already exist in your module:
+# - _normalize_result_uri
+# - parse_result_uri
+# - _parse_s3
+# - _parse_azureblob
+# - S3Uploader
+# - AzureBlobUploader
+
+
 def upload_to_result_uri(
     *,
     result_uri: str,
@@ -62,6 +71,9 @@ def upload_to_result_uri(
     data: Optional[bytes] = None,
     content_type: str = "application/json",
     aws_profile: Optional[str] = None,
+    # ---- Azure overrides (new; optional) ----
+    azure_auth: str = "managed_identity",
+    azure_connection_string: Optional[str] = None,
 ) -> None:
     """
     Upload bytes to RESULT_URI.
@@ -75,6 +87,10 @@ def upload_to_result_uri(
       - result_uri may be a prefix; we auto-append /results.json
       - content_type override
       - aws_profile optional (defaults to env AWS_PROFILE if set)
+
+    Azure extras:
+      - azure_auth: "managed_identity" (default) or "connection_string"
+      - azure_connection_string: used when azure_auth="connection_string"
     """
     payload = content if content is not None else data
     if payload is None:
@@ -90,7 +106,6 @@ def upload_to_result_uri(
         bucket, key = _parse_s3(normalized_uri)
         prof = aws_profile if aws_profile is not None else (os.getenv("AWS_PROFILE") or None)
 
-        # CHANGED: uploader expects data=, not content=
         S3Uploader(aws_profile=prof).upload_bytes(
             bucket=bucket,
             key=key,
@@ -102,9 +117,16 @@ def upload_to_result_uri(
     if scheme == "azureblob":
         account, container, blob_path = _parse_azureblob(normalized_uri)
 
-        # CHANGED: uploader expects data=, not content=
-        AzureBlobUploader().upload_bytes(
-            account=account,
+        # Matches test spy constructor signature:
+        # AzureBlobUploader(account_name=..., auth=..., connection_string=...)
+        uploader = AzureBlobUploader(
+            account_name=account,
+            auth=azure_auth,
+            connection_string=azure_connection_string,
+        )
+
+        # FIX: do NOT pass account=... to upload_bytes (spy doesn't accept it)
+        uploader.upload_bytes(
             container=container,
             blob_path=blob_path,
             data=payload,
@@ -113,3 +135,4 @@ def upload_to_result_uri(
         return
 
     raise ValueError(f"Unsupported RESULT_URI scheme: {scheme}")
+
