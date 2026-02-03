@@ -1,0 +1,43 @@
+# omni_tool_runtime/contract.py
+from __future__ import annotations
+
+import json
+import os
+from dataclasses import dataclass
+from typing import Any, Dict
+
+
+@dataclass
+class ToolContract:
+    tool_id: str
+    run_id: str
+    inputs: Dict[str, Any]
+    resources: Dict[str, Any]
+    result_uri: str
+
+
+def read_contract_from_env() -> ToolContract:
+    tool_id = os.getenv("TOOL_ID", "")
+    run_id = os.getenv("RUN_ID", "")
+    result_uri = os.getenv("RESULT_URI", "")
+
+    inputs_raw = os.getenv("INPUTS_JSON", "{}")
+    resources_raw = os.getenv("RESOURCES_JSON", "{}")
+
+    try:
+        inputs = json.loads(inputs_raw)
+    except Exception as e:
+        raise RuntimeError(f"bad INPUTS_JSON: {e}")
+
+    try:
+        resources = json.loads(resources_raw)
+    except Exception as e:
+        raise RuntimeError(f"bad RESOURCES_JSON: {e}")
+
+    return ToolContract(
+        tool_id=tool_id,
+        run_id=run_id,
+        inputs=inputs,
+        resources=resources,
+        result_uri=result_uri,
+    )

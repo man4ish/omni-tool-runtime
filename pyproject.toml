@@ -1,0 +1,18 @@
+[build-system]
+requires = ["setuptools>=65", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "omni-tool-runtime"
+version = "0.1.0"
+description = "Portable tool runtime for OmniBioAI (AWS + Azure)"
+requires-python = ">=3.10"
+
+dependencies = [
+  "boto3",
+  "azure-storage-blob",
+  "azure-identity",
+]
+
+[tool.setuptools.packages.find]
+include = ["omni_tool_runtime*", "tools*"]
