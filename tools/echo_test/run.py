@@ -5,63 +5,51 @@ import json
 import os
 import sys
 
-from omni_tool_runtime.contract import read_contract_from_env
 from omni_tool_runtime.upload_result import upload_to_result_uri
 
 
 def main() -> int:
-    c = read_contract_from_env()
+    tool_id = os.getenv("TOOL_ID", "")
+    run_id = os.getenv("RUN_ID", "")
+    result_uri = (os.getenv("RESULT_URI", "") or "").strip()
 
-    # your tool contract: expects inputs.text
-    text = c.inputs.get("text")
+    inputs_json = os.getenv("INPUTS_JSON", "{}")
+    try:
+        inputs = json.loads(inputs_json)
+    except Exception as e:
+        out = {"ok": False, "error": f"bad INPUTS_JSON: {e}", "tool_id": tool_id, "run_id": run_id}
+        print(json.dumps(out))
+        return 2
 
+    text = inputs.get("text")  # keep strict contract (or: inputs.get("text") or inputs.get("msg"))
     if text is None:
         result_obj = {
             "ok": False,
             "error": "missing inputs.text",
-            "tool_id": c.tool_id,
-            "run_id": c.run_id,
-            "inputs": c.inputs,
+            "tool_id": tool_id,
+            "run_id": run_id,
+            "inputs": inputs,
         }
-        exit_code = 2
     else:
         result_obj = {
             "ok": True,
-            "tool_id": c.tool_id,
-            "run_id": c.run_id,
+            "tool_id": tool_id,
+            "run_id": run_id,
             "results": {"echo": text},
         }
-        exit_code = 0
 
-    body = json.dumps(result_obj, indent=2).encode("utf-8")
+    body = json.dumps(result_obj, indent=2)
 
-    # Always print to logs (helpful for debugging)
-    print(body.decode("utf-8"))
+    # Always print for logs/debug
+    print(body)
 
-    if not c.result_uri:
-        # No RESULT_URI means "log-only" mode; still return nonzero to surface misconfig in TES
-        print("ERROR: RESULT_URI not set", file=sys.stderr)
-        return 3
+    # If RESULT_URI not set -> local mode: succeed
+    if not result_uri:
+        return 0
 
-    # Adapter passes RESULT_URI as a prefix; upload results.json under it.
-    uri = c.result_uri.rstrip("/") + "/results.json"
-
-    # Optional env overrides for local dev
-    azure_auth = os.getenv("AZURE_AUTH", "managed_identity")
-    azure_cs = os.getenv("AZURE_STORAGE_CONNECTION_STRING")
-
-    aws_profile = os.getenv("AWS_PROFILE")
-
-    upload_to_result_uri(
-        result_uri=uri,
-        data=body,
-        content_type="application/json",
-        aws_profile=aws_profile,
-        azure_auth=azure_auth,
-        azure_connection_string=azure_cs,
-    )
-
-    return exit_code
+    # Cloud mode: upload
+    upload_to_result_uri(result_uri=result_uri, content=body.encode("utf-8"))
+    return 0
 
 
 if __name__ == "__main__":

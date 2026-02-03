@@ -1,23 +1,18 @@
+# syntax=docker/dockerfile:1
 FROM python:3.11-slim
-
-# ---------- system ----------
-ENV PYTHONUNBUFFERED=1 \
-    PIP_NO_CACHE_DIR=1
 
 WORKDIR /app
 
-# ---------- deps ----------
-COPY pyproject.toml ./
-# or: COPY setup.py ./
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
 
-RUN pip install --upgrade pip \
- && pip install .
+COPY pyproject.toml README.md /app/
+COPY omni_tool_runtime/ /app/omni_tool_runtime/
+COPY tools/ /app/tools/
 
-# ---------- code ----------
-COPY omni_tool_runtime/ omni_tool_runtime/
-COPY tools/ tools/
+RUN echo "USING Dockerfile.cloud" \
+ && pip install --upgrade pip \
+ && pip install --no-cache-dir . \
+ && pip install --no-cache-dir boto3 azure-identity azure-storage-blob
 
-# ---------- default ----------
-# Tools are invoked via command override in Batch (AWS/Azure)
-# This keeps the image generic and reusable.
 CMD ["python", "-m", "tools.echo_test.run"]
