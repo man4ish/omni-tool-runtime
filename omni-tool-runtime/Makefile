@@ -1,6 +1,6 @@
 SHELL := /bin/bash
 
-IMAGE ?= man4ish/omni-tool-runtime
+IMAGE ?= man4ish/omnibioai-tool-runtime
 TAG ?= latest
 PLATFORMS ?= linux/amd64,linux/arm64
 

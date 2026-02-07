@@ -13,7 +13,7 @@ class S3Uploader:
         try:
             import boto3
         except Exception as e:
-            raise RuntimeError(f"boto3 not installed (install omni-tool-runtime[aws]): {e}")
+            raise RuntimeError(f"boto3 not installed (install omnibioai-tool-runtime[aws]): {e}")
 
         session_kwargs = {}
         if self.aws_profile:

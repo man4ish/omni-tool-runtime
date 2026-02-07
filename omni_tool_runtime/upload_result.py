@@ -117,15 +117,19 @@ def upload_to_result_uri(
     if scheme == "azureblob":
         account, container, blob_path = _parse_azureblob(normalized_uri)
 
-        # Matches test spy constructor signature:
-        # AzureBlobUploader(account_name=..., auth=..., connection_string=...)
+        # ---- ENV FALLBACKS (so tools can stay simple) ----
+        if azure_auth == "managed_identity":
+            azure_auth = os.getenv("AZURE_AUTH", "managed_identity")
+
+        if azure_connection_string is None:
+            azure_connection_string = os.getenv("AZURE_STORAGE_CONNECTION_STRING")
+
         uploader = AzureBlobUploader(
             account_name=account,
             auth=azure_auth,
             connection_string=azure_connection_string,
         )
 
-        # FIX: do NOT pass account=... to upload_bytes (spy doesn't accept it)
         uploader.upload_bytes(
             container=container,
             blob_path=blob_path,
@@ -133,6 +137,7 @@ def upload_to_result_uri(
             content_type=content_type,
         )
         return
+
 
     raise ValueError(f"Unsupported RESULT_URI scheme: {scheme}")
 

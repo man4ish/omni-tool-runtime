@@ -2,6 +2,7 @@
 requires = ["setuptools>=65", "wheel"]
 build-backend = "setuptools.build_meta"
 
+
 [project]
 name = "omni-tool-runtime"
 version = "0.1.0"
@@ -16,14 +17,17 @@ classifiers = [
   "License :: OSI Approved :: MIT License",
   "Operating System :: OS Independent",
 ]
+dependencies = []
 
-dependencies = [
-  "pydantic>=2.0"
-]
 
 [project.optional-dependencies]
 aws = ["boto3>=1.26"]
 azure = ["azure-identity>=1.15", "azure-storage-blob>=12.19"]
+
+
+[project.scripts]
+omni-tool-runtime = "omni_tool_runtime.run:main"
+
 
 [tool.setuptools.packages.find]
 where = ["."]

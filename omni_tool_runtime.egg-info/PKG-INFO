@@ -10,7 +10,6 @@ Classifier: License :: OSI Approved :: MIT License
 Classifier: Operating System :: OS Independent
 Requires-Python: >=3.10
 Description-Content-Type: text/markdown
-Requires-Dist: pydantic>=2.0
 Provides-Extra: aws
 Requires-Dist: boto3>=1.26; extra == "aws"
 Provides-Extra: azure
@@ -25,7 +24,7 @@ Requires-Dist: azure-storage-blob>=12.19; extra == "azure"
 
 ## Overview
 
-`omni-tool-runtime` is a **minimal, deterministic execution runtime** used by
+`omnibioai-tool-runtime` is a **minimal, deterministic execution runtime** used by
 OmniBioAI’s Tool Execution Service (TES) to run individual tools across **multiple execution backends**, including:
 
 * Local Docker execution
@@ -71,7 +70,7 @@ Those responsibilities live elsewhere in OmniBioAI.
 
 ## Execution Contract (Critical)
 
-All tools executed via `omni-tool-runtime` **must** follow this contract.
+All tools executed via `omnibioai-tool-runtime` **must** follow this contract.
 
 ### Environment Variables (Injected by TES Adapter)
 
@@ -91,7 +90,7 @@ Only **one** of `S3_RESULT_URI` or `RESULT_URI` is expected per run.
 ## Repository Structure
 
 ```text
-omni-tool-runtime/
+omnibioai-tool-runtime/
 ├── Dockerfile
 ├── README.md
 ├── pyproject.toml
@@ -176,13 +175,13 @@ Adapters **never upload results themselves**.
 From repository root:
 
 ```bash
-docker build -t man4ish/omni-tool-runtime:latest .
+docker build -t man4ish/omnibioai-tool-runtime:latest .
 ```
 
 Verify:
 
 ```bash
-docker images | grep omni-tool-runtime
+docker images | grep omnibioai-tool-runtime
 ```
 
 ---
@@ -195,7 +194,7 @@ docker run --rm \
   -e RUN_ID=local-test-1 \
   -e INPUTS_JSON='{"text":"hello world"}' \
   -e RESOURCES_JSON='{}' \
-  man4ish/omni-tool-runtime:latest
+  man4ish/omnibioai-tool-runtime:latest
 ```
 
 Expected:
@@ -209,7 +208,7 @@ Expected:
 
 ### Job Definition
 
-* Image: `man4ish/omni-tool-runtime:latest`
+* Image: `man4ish/omnibioai-tool-runtime:latest`
 * Command override:
 
 ```json
@@ -227,7 +226,7 @@ Expected:
 
 ### Task Settings
 
-* Image: `man4ish/omni-tool-runtime:latest`
+* Image: `man4ish/omnibioai-tool-runtime:latest`
 * Command:
 
 ```bash
@@ -246,15 +245,15 @@ python -m tools.echo_test.run
 ### Docker Hub
 
 ```bash
-docker push man4ish/omni-tool-runtime:latest
+docker push man4ish/omnibioai-tool-runtime:latest
 ```
 
 ### Azure Container Registry
 
 ```bash
 az acr login --name YOUR_ACR
-docker tag man4ish/omni-tool-runtime:latest YOUR_ACR.azurecr.io/omni-tool-runtime:latest
-docker push YOUR_ACR.azurecr.io/omni-tool-runtime:latest
+docker tag man4ish/omnibioai-tool-runtime:latest YOUR_ACR.azurecr.io/omnibioai-tool-runtime:latest
+docker push YOUR_ACR.azurecr.io/omnibioai-tool-runtime:latest
 ```
 
 ---
@@ -291,7 +290,7 @@ job_definition_map:
 ```yaml
 tools:
   my_new_tool:
-    image: "man4ish/omni-tool-runtime:latest"
+    image: "man4ish/omnibioai-tool-runtime:latest"
     command: ["python", "-m", "tools.my_new_tool.run"]
 ```
 
