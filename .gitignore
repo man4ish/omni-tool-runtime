@@ -98,3 +98,10 @@ obsolete/
 obsolete/
 *.dp.json
 *.rendered.json
+# Secrets / local env
+.env
+.env.*
+*.pem
+*.key
+*.pfx
+*.p12
