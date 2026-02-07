@@ -88,3 +88,8 @@ runs/
 .azure/
 .aws/
 
+
+# Local artifacts / debug dumps
+obsolete/
+*.rendered.json
+*.dp.json
