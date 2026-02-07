@@ -93,3 +93,8 @@ runs/
 obsolete/
 *.rendered.json
 *.dp.json
+
+# Local debug / scratch
+obsolete/
+*.dp.json
+*.rendered.json
