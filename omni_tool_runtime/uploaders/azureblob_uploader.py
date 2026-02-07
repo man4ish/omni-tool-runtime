@@ -1,4 +1,3 @@
-# omni_tool_runtime/uploaders/azureblob_uploader.py
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -12,6 +11,8 @@ class AzureBlobUploader:
     connection_string: Optional[str] = None
 
     def _client(self):
+        has_cs = bool(self.connection_string)
+        print(f"[azureblob] auth={self.auth} account={self.account_name} has_conn_str={has_cs}", flush=True)
         try:
             from azure.storage.blob import BlobServiceClient
         except Exception as e:
@@ -33,6 +34,10 @@ class AzureBlobUploader:
         return BlobServiceClient(account_url=url, credential=cred)
 
     def upload_bytes(self, *, container: str, blob_path: str, data: bytes, content_type: str) -> None:
+        # Normalize container name before using it
+        container = container.lower()
+        print(f"[azureblob] upload container={container} blob={blob_path}", flush=True)
+
         svc = self._client()
         bc = svc.get_blob_client(container=container, blob=blob_path)
         # overwrite is fine for deterministic runs

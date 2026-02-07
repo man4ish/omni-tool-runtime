@@ -1,0 +1,33 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: omni-runtime-echo-smoke
+spec:
+  backoffLimit: 0
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: echo-test
+          image: man4ish/omni-tool-runtime:0.1.1-cloud
+          imagePullPolicy: IfNotPresent
+          command: ["/bin/sh","-lc","python -m tools.echo_test.run"]
+          env:
+            - name: TOOL_ID
+              value: echo_test
+            - name: RUN_ID
+              value: k8s-minikube-smoke
+            - name: INPUTS_JSON
+              value: '{"text":"hello from k8s minikube"}'
+            - name: RESOURCES_JSON
+              value: '{}'
+            - name: RESULT_URI
+              value: azureblob://omnibioaites2602070356/tes-results/tes-runs/k8s-minikube-smoke/tools/echo_test/results.json
+            - name: AZURE_AUTH
+              value: connection_string
+            - name: AZURE_STORAGE_CONNECTION_STRING
+              valueFrom:
+                secretKeyRef:
+                  name: omnibioai-storage-secret
+                  key: AZURE_STORAGE_CONNECTION_STRING
+
