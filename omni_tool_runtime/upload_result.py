@@ -124,6 +124,10 @@ def upload_to_result_uri(
         if azure_connection_string is None:
             azure_connection_string = os.getenv("AZURE_STORAGE_CONNECTION_STRING")
 
+        # ADD THIS (new)
+        if azure_connection_string and azure_auth == "managed_identity":
+            azure_auth = "connection_string"    
+
         uploader = AzureBlobUploader(
             account_name=account,
             auth=azure_auth,
