@@ -125,7 +125,7 @@ def upload_to_result_uri(
 
         # ADD THIS (new)
         if azure_connection_string and azure_auth == "managed_identity":
-            azure_auth = "connection_string"    
+            azure_auth = "connection_string"
 
         uploader = AzureBlobUploader(
             account_name=account,
@@ -141,6 +141,4 @@ def upload_to_result_uri(
         )
         return
 
-
     raise ValueError(f"Unsupported RESULT_URI scheme: {scheme}")
-

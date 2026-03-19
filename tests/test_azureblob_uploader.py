@@ -7,6 +7,7 @@ Run:
     pytest tests/test_azureblob_uploader.py \
       --cov=omni_tool_runtime/uploaders/azureblob_uploader --cov-report=term-missing -v
 """
+
 from __future__ import annotations
 
 import sys
@@ -20,22 +21,23 @@ import pytest
 # loads cleanly even without the real azure package installed.
 # ---------------------------------------------------------------------------
 
-def _install_azure_stubs():
-    azure               = types.ModuleType("azure")
-    azure_storage       = types.ModuleType("azure.storage")
-    azure_storage_blob  = types.ModuleType("azure.storage.blob")
-    azure_identity      = types.ModuleType("azure.identity")
 
-    azure_storage_blob.BlobServiceClient   = MagicMock()
-    azure_identity.DefaultAzureCredential  = MagicMock()
+def _install_azure_stubs():
+    azure = types.ModuleType("azure")
+    azure_storage = types.ModuleType("azure.storage")
+    azure_storage_blob = types.ModuleType("azure.storage.blob")
+    azure_identity = types.ModuleType("azure.identity")
+
+    azure_storage_blob.BlobServiceClient = MagicMock()
+    azure_identity.DefaultAzureCredential = MagicMock()
 
     azure.storage = azure_storage
     azure_storage.blob = azure_storage_blob
 
-    sys.modules.setdefault("azure",               azure)
-    sys.modules.setdefault("azure.storage",       azure_storage)
-    sys.modules.setdefault("azure.storage.blob",  azure_storage_blob)
-    sys.modules.setdefault("azure.identity",      azure_identity)
+    sys.modules.setdefault("azure", azure)
+    sys.modules.setdefault("azure.storage", azure_storage)
+    sys.modules.setdefault("azure.storage.blob", azure_storage_blob)
+    sys.modules.setdefault("azure.identity", azure_identity)
 
     return azure_storage_blob, azure_identity
 
@@ -52,6 +54,7 @@ MOD = "omni_tool_runtime.uploaders.azureblob_uploader"
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _make_uploader(**kw) -> AzureBlobUploader:
     defaults = dict(account_name="myaccount", auth="managed_identity", connection_string=None)
     return AzureBlobUploader(**{**defaults, **kw})
@@ -59,7 +62,7 @@ def _make_uploader(**kw) -> AzureBlobUploader:
 
 def _mock_blob_service():
     """Return (mock_svc, mock_blob_client) wired together."""
-    mock_bc  = MagicMock()
+    mock_bc = MagicMock()
     mock_svc = MagicMock()
     mock_svc.get_blob_client.return_value = mock_bc
     return mock_svc, mock_bc
@@ -68,6 +71,7 @@ def _mock_blob_service():
 # ---------------------------------------------------------------------------
 # Dataclass construction
 # ---------------------------------------------------------------------------
+
 
 class TestAzureBlobUploaderConstruction:
     def test_account_name_stored(self):
@@ -91,6 +95,7 @@ class TestAzureBlobUploaderConstruction:
 # ---------------------------------------------------------------------------
 # _client — connection_string auth
 # ---------------------------------------------------------------------------
+
 
 class TestClientConnectionString:
     def _make(self, connection_string="cs://fake"):
@@ -132,6 +137,7 @@ class TestClientConnectionString:
 # _client — managed identity auth
 # ---------------------------------------------------------------------------
 
+
 class TestClientManagedIdentity:
     def _make(self):
         return _make_uploader(auth="managed_identity", account_name="storageacct")
@@ -140,7 +146,7 @@ class TestClientManagedIdentity:
         mock_dac = MagicMock()
         mock_bsc = MagicMock()
         _azure_identity_stub.DefaultAzureCredential = mock_dac
-        _azure_storage_blob_stub.BlobServiceClient  = mock_bsc
+        _azure_storage_blob_stub.BlobServiceClient = mock_bsc
         self._make()._client()
         mock_dac.assert_called_once_with(exclude_interactive_browser_credential=True)
 
@@ -148,17 +154,17 @@ class TestClientManagedIdentity:
         mock_dac = MagicMock()
         mock_bsc = MagicMock()
         _azure_identity_stub.DefaultAzureCredential = mock_dac
-        _azure_storage_blob_stub.BlobServiceClient  = mock_bsc
+        _azure_storage_blob_stub.BlobServiceClient = mock_bsc
         self._make()._client()
         call_kwargs = mock_bsc.call_args.kwargs
         assert call_kwargs["account_url"] == "https://storageacct.blob.core.windows.net"
 
     def test_credential_passed_to_blob_service_client(self):
         fake_cred = object()
-        mock_dac  = MagicMock(return_value=fake_cred)
-        mock_bsc  = MagicMock()
+        mock_dac = MagicMock(return_value=fake_cred)
+        mock_bsc = MagicMock()
         _azure_identity_stub.DefaultAzureCredential = mock_dac
-        _azure_storage_blob_stub.BlobServiceClient  = mock_bsc
+        _azure_storage_blob_stub.BlobServiceClient = mock_bsc
         self._make()._client()
         assert mock_bsc.call_args.kwargs["credential"] is fake_cred
 
@@ -166,7 +172,7 @@ class TestClientManagedIdentity:
         mock_dac = MagicMock()
         mock_bsc = MagicMock()
         _azure_identity_stub.DefaultAzureCredential = mock_dac
-        _azure_storage_blob_stub.BlobServiceClient  = mock_bsc
+        _azure_storage_blob_stub.BlobServiceClient = mock_bsc
         self._make()._client()
         mock_bsc.from_connection_string.assert_not_called()
 
@@ -175,7 +181,7 @@ class TestClientManagedIdentity:
         mock_dac = MagicMock()
         mock_bsc = MagicMock(return_value=sentinel)
         _azure_identity_stub.DefaultAzureCredential = mock_dac
-        _azure_storage_blob_stub.BlobServiceClient  = mock_bsc
+        _azure_storage_blob_stub.BlobServiceClient = mock_bsc
         assert self._make()._client() is sentinel
 
 
@@ -183,11 +189,14 @@ class TestClientManagedIdentity:
 # _client — missing azure packages raise RuntimeError
 # ---------------------------------------------------------------------------
 
+
 class TestClientMissingPackages:
     def test_missing_azure_storage_blob_raises(self):
         uploader = _make_uploader(auth="managed_identity")
-        with patch.dict(sys.modules, {"azure.storage.blob": None}), \
-             pytest.raises(RuntimeError, match="azure-storage-blob not installed"):
+        with (
+            patch.dict(sys.modules, {"azure.storage.blob": None}),
+            pytest.raises(RuntimeError, match="azure-storage-blob not installed"),
+        ):
             uploader._client()
 
     def test_missing_azure_identity_raises(self):
@@ -195,21 +204,26 @@ class TestClientMissingPackages:
         # azure.storage.blob is present but azure.identity is missing
         real_bsc = _azure_storage_blob_stub.BlobServiceClient
         _azure_storage_blob_stub.BlobServiceClient = MagicMock()
-        with patch.dict(sys.modules, {"azure.identity": None}), \
-             pytest.raises(RuntimeError, match="azure-identity not installed"):
+        with (
+            patch.dict(sys.modules, {"azure.identity": None}),
+            pytest.raises(RuntimeError, match="azure-identity not installed"),
+        ):
             uploader._client()
         _azure_storage_blob_stub.BlobServiceClient = real_bsc
 
     def test_missing_blob_error_message_mentions_install(self):
         uploader = _make_uploader(auth="managed_identity")
-        with patch.dict(sys.modules, {"azure.storage.blob": None}), \
-             pytest.raises(RuntimeError, match="omnibioai-tool-runtime"):
+        with (
+            patch.dict(sys.modules, {"azure.storage.blob": None}),
+            pytest.raises(RuntimeError, match="omnibioai-tool-runtime"),
+        ):
             uploader._client()
 
 
 # ---------------------------------------------------------------------------
 # upload_bytes — argument forwarding
 # ---------------------------------------------------------------------------
+
 
 class TestUploadBytes:
     def _call(self, uploader=None, **kw):
@@ -267,8 +281,10 @@ class TestUploadBytes:
         mock_svc, _ = _mock_blob_service()
         with patch.object(uploader, "_client", return_value=mock_svc) as mock_client:
             uploader.upload_bytes(
-                container="c", blob_path="b.json",
-                data=b"x", content_type="application/json",
+                container="c",
+                blob_path="b.json",
+                data=b"x",
+                content_type="application/json",
             )
         mock_client.assert_called_once()
 
@@ -277,8 +293,10 @@ class TestUploadBytes:
         mock_svc, _ = _mock_blob_service()
         with patch.object(uploader, "_client", return_value=mock_svc):
             result = uploader.upload_bytes(
-                container="c", blob_path="b.json",
-                data=b"x", content_type="application/json",
+                container="c",
+                blob_path="b.json",
+                data=b"x",
+                content_type="application/json",
             )
         assert result is None
 
@@ -293,8 +311,10 @@ class TestUploadBytes:
         mock_svc, _ = _mock_blob_service()
         with patch.object(uploader, "_client", return_value=mock_svc):
             uploader.upload_bytes(
-                container="mycontainer", blob_path="path/result.json",
-                data=b"x", content_type="application/json",
+                container="mycontainer",
+                blob_path="path/result.json",
+                data=b"x",
+                content_type="application/json",
             )
         out = capsys.readouterr().out
         assert "mycontainer" in out
@@ -304,6 +324,7 @@ class TestUploadBytes:
 # ---------------------------------------------------------------------------
 # upload_bytes — end-to-end with connection_string auth
 # ---------------------------------------------------------------------------
+
 
 class TestUploadBytesEndToEndConnectionString:
     def test_full_flow_connection_string(self):
@@ -337,17 +358,18 @@ class TestUploadBytesEndToEndConnectionString:
 # upload_bytes — end-to-end with managed identity auth
 # ---------------------------------------------------------------------------
 
+
 class TestUploadBytesEndToEndManagedIdentity:
     def test_full_flow_managed_identity(self):
         uploader = _make_uploader(auth="managed_identity", account_name="storageacct")
         mock_svc, mock_bc = _mock_blob_service()
 
         fake_cred = object()
-        mock_dac  = MagicMock(return_value=fake_cred)
-        mock_bsc  = MagicMock(return_value=mock_svc)
+        mock_dac = MagicMock(return_value=fake_cred)
+        mock_bsc = MagicMock(return_value=mock_svc)
 
         _azure_identity_stub.DefaultAzureCredential = mock_dac
-        _azure_storage_blob_stub.BlobServiceClient  = mock_bsc
+        _azure_storage_blob_stub.BlobServiceClient = mock_bsc
 
         uploader.upload_bytes(
             container="OUT",
@@ -362,9 +384,7 @@ class TestUploadBytesEndToEndManagedIdentity:
             credential=fake_cred,
         )
         # Container is lowercased
-        mock_svc.get_blob_client.assert_called_once_with(
-            container="out", blob="run-2/results.json"
-        )
+        mock_svc.get_blob_client.assert_called_once_with(container="out", blob="run-2/results.json")
         mock_bc.upload_blob.assert_called_once_with(
             b"payload", overwrite=True, content_type="application/octet-stream"
         )

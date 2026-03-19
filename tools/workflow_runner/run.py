@@ -83,7 +83,11 @@ def _upload_uri(uri: str, data: bytes, content_type: str = "application/json") -
         container, blob = path.split("/", 1)
 
         # Prefer standard env var
-        cs = os.getenv("AZURE_STORAGE_CONNECTION_STRING") or os.getenv("OMNI_TOOL_RUNTIME_AZURE_CONNECTION_STRING") or ""
+        cs = (
+            os.getenv("AZURE_STORAGE_CONNECTION_STRING")
+            or os.getenv("OMNI_TOOL_RUNTIME_AZURE_CONNECTION_STRING")
+            or ""
+        )
         if not cs:
             raise RuntimeError("Missing AZURE_STORAGE_CONNECTION_STRING for azureblob upload")
 
@@ -196,7 +200,9 @@ def main() -> int:
         "exec_root": str(exec_root),
         "results_uri": results_uri,
         "outputs_uri": outputs_uri,
-        "outputs": outputs_obj if len(json.dumps(outputs_obj)) < 200_000 else {"note": "outputs too large; see outputs_uri"},
+        "outputs": outputs_obj
+        if len(json.dumps(outputs_obj)) < 200_000
+        else {"note": "outputs too large; see outputs_uri"},
     }
     if err:
         results_obj["error"] = err

@@ -6,6 +6,7 @@ Run:
     pytest tests/test_upload_result.py \
       --cov=omni_tool_runtime/upload_result --cov-report=term-missing -v
 """
+
 from __future__ import annotations
 
 from unittest.mock import MagicMock, patch
@@ -25,6 +26,7 @@ MOD = "omni_tool_runtime.upload_result"
 # ---------------------------------------------------------------------------
 # _normalize_result_uri
 # ---------------------------------------------------------------------------
+
 
 class TestNormalizeResultUri:
     def test_already_ends_in_json_unchanged(self):
@@ -48,7 +50,10 @@ class TestNormalizeResultUri:
         assert _normalize_result_uri("s3://bucket/out.JSON") == "s3://bucket/out.JSON"
 
     def test_other_json_extension_kept(self):
-        assert _normalize_result_uri("azureblob://acct/cont/blob.json") == "azureblob://acct/cont/blob.json"
+        assert (
+            _normalize_result_uri("azureblob://acct/cont/blob.json")
+            == "azureblob://acct/cont/blob.json"
+        )
 
     def test_empty_string_raises_runtime_error(self):
         with pytest.raises(RuntimeError, match="RESULT_URI not set"):
@@ -70,6 +75,7 @@ class TestNormalizeResultUri:
 # ---------------------------------------------------------------------------
 # _parse_s3
 # ---------------------------------------------------------------------------
+
 
 class TestParseS3:
     def test_returns_bucket_and_key(self):
@@ -109,6 +115,7 @@ class TestParseS3:
 # ---------------------------------------------------------------------------
 # _parse_azureblob
 # ---------------------------------------------------------------------------
+
 
 class TestParseAzureblob:
     def test_returns_account_container_blob(self):
@@ -152,6 +159,7 @@ class TestParseAzureblob:
 # upload_to_result_uri — argument validation
 # ---------------------------------------------------------------------------
 
+
 class TestUploadArgValidation:
     def test_no_content_or_data_raises_type_error(self):
         with pytest.raises(TypeError, match="content="):
@@ -173,8 +181,10 @@ class TestUploadArgValidation:
 
     def test_content_preferred_over_data(self):
         mock_uploader = MagicMock()
-        with patch(f"{MOD}.parse_result_uri") as mock_parse, \
-             patch(f"{MOD}.S3Uploader", return_value=mock_uploader):
+        with (
+            patch(f"{MOD}.parse_result_uri") as mock_parse,
+            patch(f"{MOD}.S3Uploader", return_value=mock_uploader),
+        ):
             mock_parse.return_value = MagicMock(scheme="s3")
             upload_to_result_uri(
                 result_uri="s3://bucket/results.json",
@@ -186,8 +196,10 @@ class TestUploadArgValidation:
 
     def test_data_used_when_content_is_none(self):
         mock_uploader = MagicMock()
-        with patch(f"{MOD}.parse_result_uri") as mock_parse, \
-             patch(f"{MOD}.S3Uploader", return_value=mock_uploader):
+        with (
+            patch(f"{MOD}.parse_result_uri") as mock_parse,
+            patch(f"{MOD}.S3Uploader", return_value=mock_uploader),
+        ):
             mock_parse.return_value = MagicMock(scheme="s3")
             upload_to_result_uri(
                 result_uri="s3://bucket/results.json",
@@ -200,11 +212,14 @@ class TestUploadArgValidation:
 # upload_to_result_uri — S3 path
 # ---------------------------------------------------------------------------
 
+
 class TestUploadS3:
     def _call(self, uri="s3://my-bucket/results.json", content=b"payload", **kw):
         mock_uploader = MagicMock()
-        with patch(f"{MOD}.parse_result_uri") as mock_parse, \
-             patch(f"{MOD}.S3Uploader", return_value=mock_uploader) as mock_cls:
+        with (
+            patch(f"{MOD}.parse_result_uri") as mock_parse,
+            patch(f"{MOD}.S3Uploader", return_value=mock_uploader) as mock_cls,
+        ):
             mock_parse.return_value = MagicMock(scheme="s3")
             upload_to_result_uri(result_uri=uri, content=content, **kw)
         return mock_cls, mock_uploader
@@ -247,18 +262,22 @@ class TestUploadS3:
         assert mock_cls.call_args.kwargs["aws_profile"] is None
 
     def test_aws_profile_from_env_when_not_passed(self):
-        with patch(f"{MOD}.parse_result_uri") as mock_parse, \
-             patch(f"{MOD}.S3Uploader") as mock_cls, \
-             patch.dict("os.environ", {"AWS_PROFILE": "env-profile"}, clear=True):
+        with (
+            patch(f"{MOD}.parse_result_uri") as mock_parse,
+            patch(f"{MOD}.S3Uploader") as mock_cls,
+            patch.dict("os.environ", {"AWS_PROFILE": "env-profile"}, clear=True),
+        ):
             mock_parse.return_value = MagicMock(scheme="s3")
             mock_cls.return_value = MagicMock()
             upload_to_result_uri(result_uri="s3://bucket/results.json", content=b"x")
         assert mock_cls.call_args.kwargs["aws_profile"] == "env-profile"
 
     def test_explicit_aws_profile_overrides_env(self):
-        with patch(f"{MOD}.parse_result_uri") as mock_parse, \
-             patch(f"{MOD}.S3Uploader") as mock_cls, \
-             patch.dict("os.environ", {"AWS_PROFILE": "env-profile"}, clear=True):
+        with (
+            patch(f"{MOD}.parse_result_uri") as mock_parse,
+            patch(f"{MOD}.S3Uploader") as mock_cls,
+            patch.dict("os.environ", {"AWS_PROFILE": "env-profile"}, clear=True),
+        ):
             mock_parse.return_value = MagicMock(scheme="s3")
             mock_cls.return_value = MagicMock()
             upload_to_result_uri(
@@ -273,9 +292,11 @@ class TestUploadS3:
         assert mock_uploader.upload_bytes.call_args.kwargs["key"].endswith("results.json")
 
     def test_azure_uploader_not_called_for_s3(self):
-        with patch(f"{MOD}.parse_result_uri") as mock_parse, \
-             patch(f"{MOD}.S3Uploader", return_value=MagicMock()), \
-             patch(f"{MOD}.AzureBlobUploader") as mock_azure:
+        with (
+            patch(f"{MOD}.parse_result_uri") as mock_parse,
+            patch(f"{MOD}.S3Uploader", return_value=MagicMock()),
+            patch(f"{MOD}.AzureBlobUploader") as mock_azure,
+        ):
             mock_parse.return_value = MagicMock(scheme="s3")
             upload_to_result_uri(result_uri="s3://bucket/results.json", content=b"x")
         mock_azure.assert_not_called()
@@ -285,15 +306,18 @@ class TestUploadS3:
 # upload_to_result_uri — Azure Blob path
 # ---------------------------------------------------------------------------
 
+
 class TestUploadAzureBlob:
     _URI = "azureblob://myaccount/mycontainer/path/results.json"
 
     def _call(self, uri=None, content=b"payload", **kw):
         uri = uri or self._URI
         mock_uploader = MagicMock()
-        with patch(f"{MOD}.parse_result_uri") as mock_parse, \
-             patch(f"{MOD}.AzureBlobUploader", return_value=mock_uploader) as mock_cls, \
-             patch.dict("os.environ", {}, clear=True):
+        with (
+            patch(f"{MOD}.parse_result_uri") as mock_parse,
+            patch(f"{MOD}.AzureBlobUploader", return_value=mock_uploader) as mock_cls,
+            patch.dict("os.environ", {}, clear=True),
+        ):
             mock_parse.return_value = MagicMock(scheme="azureblob")
             upload_to_result_uri(result_uri=uri, content=content, **kw)
         return mock_cls, mock_uploader
@@ -324,7 +348,10 @@ class TestUploadAzureBlob:
 
     def test_custom_content_type_forwarded(self):
         _, mock_uploader = self._call(content_type="application/octet-stream")
-        assert mock_uploader.upload_bytes.call_args.kwargs["content_type"] == "application/octet-stream"
+        assert (
+            mock_uploader.upload_bytes.call_args.kwargs["content_type"]
+            == "application/octet-stream"
+        )
 
     def test_account_name_passed_to_uploader(self):
         mock_cls, _ = self._call()
@@ -352,10 +379,11 @@ class TestUploadAzureBlob:
     def test_env_connection_string_used_when_not_passed(self):
         conn = "DefaultEndpointsProtocol=https;AccountName=env;..."
         mock_uploader = MagicMock()
-        with patch(f"{MOD}.parse_result_uri") as mock_parse, \
-             patch(f"{MOD}.AzureBlobUploader", return_value=mock_uploader) as mock_cls, \
-             patch.dict("os.environ",
-                        {"AZURE_STORAGE_CONNECTION_STRING": conn}, clear=True):
+        with (
+            patch(f"{MOD}.parse_result_uri") as mock_parse,
+            patch(f"{MOD}.AzureBlobUploader", return_value=mock_uploader) as mock_cls,
+            patch.dict("os.environ", {"AZURE_STORAGE_CONNECTION_STRING": conn}, clear=True),
+        ):
             mock_parse.return_value = MagicMock(scheme="azureblob")
             upload_to_result_uri(result_uri=self._URI, content=b"x")
         assert mock_cls.call_args.kwargs["connection_string"] == conn
@@ -364,42 +392,47 @@ class TestUploadAzureBlob:
         """When AZURE_STORAGE_CONNECTION_STRING is set, auth should flip to connection_string."""
         conn = "DefaultEndpointsProtocol=https;AccountName=env;..."
         mock_uploader = MagicMock()
-        with patch(f"{MOD}.parse_result_uri") as mock_parse, \
-             patch(f"{MOD}.AzureBlobUploader", return_value=mock_uploader) as mock_cls, \
-             patch.dict("os.environ",
-                        {"AZURE_STORAGE_CONNECTION_STRING": conn}, clear=True):
+        with (
+            patch(f"{MOD}.parse_result_uri") as mock_parse,
+            patch(f"{MOD}.AzureBlobUploader", return_value=mock_uploader) as mock_cls,
+            patch.dict("os.environ", {"AZURE_STORAGE_CONNECTION_STRING": conn}, clear=True),
+        ):
             mock_parse.return_value = MagicMock(scheme="azureblob")
             upload_to_result_uri(result_uri=self._URI, content=b"x")
         assert mock_cls.call_args.kwargs["auth"] == "connection_string"
 
     def test_env_azure_auth_overrides_default(self):
         mock_uploader = MagicMock()
-        with patch(f"{MOD}.parse_result_uri") as mock_parse, \
-             patch(f"{MOD}.AzureBlobUploader", return_value=mock_uploader) as mock_cls, \
-             patch.dict("os.environ", {"AZURE_AUTH": "connection_string"}, clear=True):
+        with (
+            patch(f"{MOD}.parse_result_uri") as mock_parse,
+            patch(f"{MOD}.AzureBlobUploader", return_value=mock_uploader) as mock_cls,
+            patch.dict("os.environ", {"AZURE_AUTH": "connection_string"}, clear=True),
+        ):
             mock_parse.return_value = MagicMock(scheme="azureblob")
             upload_to_result_uri(result_uri=self._URI, content=b"x")
         assert mock_cls.call_args.kwargs["auth"] == "connection_string"
 
     def test_s3_uploader_not_called_for_azure(self):
-        with patch(f"{MOD}.parse_result_uri") as mock_parse, \
-             patch(f"{MOD}.AzureBlobUploader", return_value=MagicMock()), \
-             patch(f"{MOD}.S3Uploader") as mock_s3, \
-             patch.dict("os.environ", {}, clear=True):
+        with (
+            patch(f"{MOD}.parse_result_uri") as mock_parse,
+            patch(f"{MOD}.AzureBlobUploader", return_value=MagicMock()),
+            patch(f"{MOD}.S3Uploader") as mock_s3,
+            patch.dict("os.environ", {}, clear=True),
+        ):
             mock_parse.return_value = MagicMock(scheme="azureblob")
             upload_to_result_uri(result_uri=self._URI, content=b"x")
         mock_s3.assert_not_called()
 
     def test_prefix_uri_normalized(self):
-        _, mock_uploader = self._call(
-            uri="azureblob://myaccount/mycontainer/run-outputs"
-        )
+        _, mock_uploader = self._call(uri="azureblob://myaccount/mycontainer/run-outputs")
         assert mock_uploader.upload_bytes.call_args.kwargs["blob_path"].endswith("results.json")
 
     def test_returns_none(self):
-        with patch(f"{MOD}.parse_result_uri") as mock_parse, \
-             patch(f"{MOD}.AzureBlobUploader", return_value=MagicMock()), \
-             patch.dict("os.environ", {}, clear=True):
+        with (
+            patch(f"{MOD}.parse_result_uri") as mock_parse,
+            patch(f"{MOD}.AzureBlobUploader", return_value=MagicMock()),
+            patch.dict("os.environ", {}, clear=True),
+        ):
             mock_parse.return_value = MagicMock(scheme="azureblob")
             rv = upload_to_result_uri(result_uri=self._URI, content=b"x")
         assert rv is None

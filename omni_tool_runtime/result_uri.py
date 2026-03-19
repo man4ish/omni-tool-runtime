@@ -34,6 +34,8 @@ def parse_result_uri(uri: str) -> ParsedResultURI:
         container, blob_path = parts[0], parts[1]
         if not account or not container or not blob_path:
             raise ValueError(f"Invalid azureblob:// URI: {uri}")
-        return ParsedResultURI(scheme="azureblob", account_or_bucket=account, container=container, path=blob_path)
+        return ParsedResultURI(
+            scheme="azureblob", account_or_bucket=account, container=container, path=blob_path
+        )
 
     raise ValueError(f"Unsupported RESULT_URI scheme {u.scheme!r}: {uri}")

@@ -27,8 +27,10 @@ EXCLUDE_DIRS = {
     "build",
 }
 
+
 def should_skip(path: Path) -> bool:
     return any(part in EXCLUDE_DIRS for part in path.parts)
+
 
 def main():
     files = []
@@ -62,6 +64,7 @@ def main():
                 out.write(f"# ERROR READING FILE: {e}\n")
 
     print(f"✅ Wrote {OUTPUT} ({OUTPUT.stat().st_size} bytes)")
+
 
 if __name__ == "__main__":
     main()

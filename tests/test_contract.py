@@ -5,6 +5,7 @@ Run:
     pytest tests/test_contract.py -v
     pytest tests/test_contract.py --cov=omni_tool_runtime/contract --cov-report=term-missing -v
 """
+
 from __future__ import annotations
 
 import json
@@ -16,6 +17,7 @@ from omni_tool_runtime.contract import ToolContract, read_contract_from_env
 # ---------------------------------------------------------------------------
 # ToolContract dataclass
 # ---------------------------------------------------------------------------
+
 
 class TestToolContract:
     def _make(self, **kw) -> ToolContract:
@@ -58,6 +60,7 @@ class TestToolContract:
 
     def test_is_dataclass_instance(self):
         import dataclasses
+
         assert dataclasses.is_dataclass(self._make())
 
     def test_fields_are_assignable(self):
@@ -70,108 +73,166 @@ class TestToolContract:
 # read_contract_from_env — happy paths
 # ---------------------------------------------------------------------------
 
+
 class TestReadContractFromEnvHappyPath:
     def _call(self, env: dict) -> ToolContract:
         import unittest.mock as mock
+
         with mock.patch.dict("os.environ", env, clear=True):
             return read_contract_from_env()
 
     def test_returns_tool_contract(self):
-        result = self._call({
-            "TOOL_ID": "t1", "RUN_ID": "r1", "RESULT_URI": "s3://b/r.json",
-            "INPUTS_JSON": "{}", "RESOURCES_JSON": "{}",
-        })
+        result = self._call(
+            {
+                "TOOL_ID": "t1",
+                "RUN_ID": "r1",
+                "RESULT_URI": "s3://b/r.json",
+                "INPUTS_JSON": "{}",
+                "RESOURCES_JSON": "{}",
+            }
+        )
         assert isinstance(result, ToolContract)
 
     def test_tool_id_read(self):
-        result = self._call({
-            "TOOL_ID": "my-tool", "RUN_ID": "", "RESULT_URI": "",
-            "INPUTS_JSON": "{}", "RESOURCES_JSON": "{}",
-        })
+        result = self._call(
+            {
+                "TOOL_ID": "my-tool",
+                "RUN_ID": "",
+                "RESULT_URI": "",
+                "INPUTS_JSON": "{}",
+                "RESOURCES_JSON": "{}",
+            }
+        )
         assert result.tool_id == "my-tool"
 
     def test_run_id_read(self):
-        result = self._call({
-            "TOOL_ID": "", "RUN_ID": "run-xyz", "RESULT_URI": "",
-            "INPUTS_JSON": "{}", "RESOURCES_JSON": "{}",
-        })
+        result = self._call(
+            {
+                "TOOL_ID": "",
+                "RUN_ID": "run-xyz",
+                "RESULT_URI": "",
+                "INPUTS_JSON": "{}",
+                "RESOURCES_JSON": "{}",
+            }
+        )
         assert result.run_id == "run-xyz"
 
     def test_result_uri_read(self):
-        result = self._call({
-            "TOOL_ID": "", "RUN_ID": "", "RESULT_URI": "az://container/out.json",
-            "INPUTS_JSON": "{}", "RESOURCES_JSON": "{}",
-        })
+        result = self._call(
+            {
+                "TOOL_ID": "",
+                "RUN_ID": "",
+                "RESULT_URI": "az://container/out.json",
+                "INPUTS_JSON": "{}",
+                "RESOURCES_JSON": "{}",
+            }
+        )
         assert result.result_uri == "az://container/out.json"
 
     def test_inputs_json_parsed(self):
         payload = {"vcf": "/data/file.vcf", "threshold": 0.05}
-        result = self._call({
-            "TOOL_ID": "", "RUN_ID": "", "RESULT_URI": "",
-            "INPUTS_JSON": json.dumps(payload), "RESOURCES_JSON": "{}",
-        })
+        result = self._call(
+            {
+                "TOOL_ID": "",
+                "RUN_ID": "",
+                "RESULT_URI": "",
+                "INPUTS_JSON": json.dumps(payload),
+                "RESOURCES_JSON": "{}",
+            }
+        )
         assert result.inputs == payload
 
     def test_resources_json_parsed(self):
         resources = {"cpu": 4, "memory": "8Gi"}
-        result = self._call({
-            "TOOL_ID": "", "RUN_ID": "", "RESULT_URI": "",
-            "INPUTS_JSON": "{}", "RESOURCES_JSON": json.dumps(resources),
-        })
+        result = self._call(
+            {
+                "TOOL_ID": "",
+                "RUN_ID": "",
+                "RESULT_URI": "",
+                "INPUTS_JSON": "{}",
+                "RESOURCES_JSON": json.dumps(resources),
+            }
+        )
         assert result.resources == resources
 
     def test_empty_inputs_json_gives_empty_dict(self):
-        result = self._call({
-            "TOOL_ID": "", "RUN_ID": "", "RESULT_URI": "",
-            "INPUTS_JSON": "{}", "RESOURCES_JSON": "{}",
-        })
+        result = self._call(
+            {
+                "TOOL_ID": "",
+                "RUN_ID": "",
+                "RESULT_URI": "",
+                "INPUTS_JSON": "{}",
+                "RESOURCES_JSON": "{}",
+            }
+        )
         assert result.inputs == {}
 
     def test_empty_resources_json_gives_empty_dict(self):
-        result = self._call({
-            "TOOL_ID": "", "RUN_ID": "", "RESULT_URI": "",
-            "INPUTS_JSON": "{}", "RESOURCES_JSON": "{}",
-        })
+        result = self._call(
+            {
+                "TOOL_ID": "",
+                "RUN_ID": "",
+                "RESULT_URI": "",
+                "INPUTS_JSON": "{}",
+                "RESOURCES_JSON": "{}",
+            }
+        )
         assert result.resources == {}
 
     def test_nested_inputs_parsed(self):
         payload = {"filters": {"maf": 0.01, "tags": ["a", "b"]}}
-        result = self._call({
-            "TOOL_ID": "", "RUN_ID": "", "RESULT_URI": "",
-            "INPUTS_JSON": json.dumps(payload), "RESOURCES_JSON": "{}",
-        })
+        result = self._call(
+            {
+                "TOOL_ID": "",
+                "RUN_ID": "",
+                "RESULT_URI": "",
+                "INPUTS_JSON": json.dumps(payload),
+                "RESOURCES_JSON": "{}",
+            }
+        )
         assert result.inputs == payload
 
     def test_inputs_list_value_ok(self):
         payload = {"samples": ["s1", "s2", "s3"]}
-        result = self._call({
-            "TOOL_ID": "", "RUN_ID": "", "RESULT_URI": "",
-            "INPUTS_JSON": json.dumps(payload), "RESOURCES_JSON": "{}",
-        })
+        result = self._call(
+            {
+                "TOOL_ID": "",
+                "RUN_ID": "",
+                "RESULT_URI": "",
+                "INPUTS_JSON": json.dumps(payload),
+                "RESOURCES_JSON": "{}",
+            }
+        )
         assert result.inputs["samples"] == ["s1", "s2", "s3"]
 
     def test_all_fields_populated_together(self):
-        inputs    = {"k": "v"}
+        inputs = {"k": "v"}
         resources = {"cpu": 1}
-        result = self._call({
-            "TOOL_ID": "t", "RUN_ID": "r", "RESULT_URI": "s3://b/f.json",
-            "INPUTS_JSON": json.dumps(inputs),
-            "RESOURCES_JSON": json.dumps(resources),
-        })
-        assert result.tool_id    == "t"
-        assert result.run_id     == "r"
+        result = self._call(
+            {
+                "TOOL_ID": "t",
+                "RUN_ID": "r",
+                "RESULT_URI": "s3://b/f.json",
+                "INPUTS_JSON": json.dumps(inputs),
+                "RESOURCES_JSON": json.dumps(resources),
+            }
+        )
+        assert result.tool_id == "t"
+        assert result.run_id == "r"
         assert result.result_uri == "s3://b/f.json"
-        assert result.inputs     == inputs
-        assert result.resources  == resources
+        assert result.inputs == inputs
+        assert result.resources == resources
 
 
 # ---------------------------------------------------------------------------
 # read_contract_from_env — missing env vars use defaults
 # ---------------------------------------------------------------------------
 
+
 class TestReadContractFromEnvDefaults:
     def _call_empty(self) -> ToolContract:
         import unittest.mock as mock
+
         with mock.patch.dict("os.environ", {}, clear=True):
             return read_contract_from_env()
 
@@ -195,60 +256,97 @@ class TestReadContractFromEnvDefaults:
 # read_contract_from_env — bad JSON raises RuntimeError
 # ---------------------------------------------------------------------------
 
+
 class TestReadContractFromEnvBadJson:
     def _call(self, env: dict):
         import unittest.mock as mock
+
         with mock.patch.dict("os.environ", env, clear=True):
             return read_contract_from_env()
 
     def test_bad_inputs_json_raises_runtime_error(self):
         with pytest.raises(RuntimeError):
-            self._call({
-                "TOOL_ID": "", "RUN_ID": "", "RESULT_URI": "",
-                "INPUTS_JSON": "not-json", "RESOURCES_JSON": "{}",
-            })
+            self._call(
+                {
+                    "TOOL_ID": "",
+                    "RUN_ID": "",
+                    "RESULT_URI": "",
+                    "INPUTS_JSON": "not-json",
+                    "RESOURCES_JSON": "{}",
+                }
+            )
 
     def test_bad_inputs_json_message_mentions_inputs(self):
         with pytest.raises(RuntimeError, match="INPUTS_JSON"):
-            self._call({
-                "TOOL_ID": "", "RUN_ID": "", "RESULT_URI": "",
-                "INPUTS_JSON": "{bad", "RESOURCES_JSON": "{}",
-            })
+            self._call(
+                {
+                    "TOOL_ID": "",
+                    "RUN_ID": "",
+                    "RESULT_URI": "",
+                    "INPUTS_JSON": "{bad",
+                    "RESOURCES_JSON": "{}",
+                }
+            )
 
     def test_bad_resources_json_raises_runtime_error(self):
         with pytest.raises(RuntimeError):
-            self._call({
-                "TOOL_ID": "", "RUN_ID": "", "RESULT_URI": "",
-                "INPUTS_JSON": "{}", "RESOURCES_JSON": "not-json",
-            })
+            self._call(
+                {
+                    "TOOL_ID": "",
+                    "RUN_ID": "",
+                    "RESULT_URI": "",
+                    "INPUTS_JSON": "{}",
+                    "RESOURCES_JSON": "not-json",
+                }
+            )
 
     def test_bad_resources_json_message_mentions_resources(self):
         with pytest.raises(RuntimeError, match="RESOURCES_JSON"):
-            self._call({
-                "TOOL_ID": "", "RUN_ID": "", "RESULT_URI": "",
-                "INPUTS_JSON": "{}", "RESOURCES_JSON": "}bad{",
-            })
+            self._call(
+                {
+                    "TOOL_ID": "",
+                    "RUN_ID": "",
+                    "RESULT_URI": "",
+                    "INPUTS_JSON": "{}",
+                    "RESOURCES_JSON": "}bad{",
+                }
+            )
 
     def test_truncated_inputs_json_raises(self):
         with pytest.raises(RuntimeError):
-            self._call({
-                "TOOL_ID": "", "RUN_ID": "", "RESULT_URI": "",
-                "INPUTS_JSON": '{"key": ', "RESOURCES_JSON": "{}",
-            })
+            self._call(
+                {
+                    "TOOL_ID": "",
+                    "RUN_ID": "",
+                    "RESULT_URI": "",
+                    "INPUTS_JSON": '{"key": ',
+                    "RESOURCES_JSON": "{}",
+                }
+            )
 
     def test_plain_string_inputs_json_raises(self):
         # A bare string is valid JSON but not a dict — however json.loads
         # succeeds so it is stored as-is; this test confirms no error is raised.
-        result = self._call({
-            "TOOL_ID": "", "RUN_ID": "", "RESULT_URI": "",
-            "INPUTS_JSON": '"just-a-string"', "RESOURCES_JSON": "{}",
-        })
+        result = self._call(
+            {
+                "TOOL_ID": "",
+                "RUN_ID": "",
+                "RESULT_URI": "",
+                "INPUTS_JSON": '"just-a-string"',
+                "RESOURCES_JSON": "{}",
+            }
+        )
         assert result.inputs == "just-a-string"
 
     def test_both_bad_raises_on_inputs_first(self):
         # inputs is parsed first, so a bad inputs raises before resources is checked
         with pytest.raises(RuntimeError, match="INPUTS_JSON"):
-            self._call({
-                "TOOL_ID": "", "RUN_ID": "", "RESULT_URI": "",
-                "INPUTS_JSON": "!!!",  "RESOURCES_JSON": "!!!",
-            })
+            self._call(
+                {
+                    "TOOL_ID": "",
+                    "RUN_ID": "",
+                    "RESULT_URI": "",
+                    "INPUTS_JSON": "!!!",
+                    "RESOURCES_JSON": "!!!",
+                }
+            )

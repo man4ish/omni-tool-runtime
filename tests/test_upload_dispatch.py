@@ -13,7 +13,13 @@ class _S3Spy:
 
     def upload_bytes(self, *, bucket: str, key: str, data: bytes, content_type: str) -> None:
         self.calls.append(
-            {"bucket": bucket, "key": key, "data": data, "content_type": content_type, "aws_profile": self.aws_profile}
+            {
+                "bucket": bucket,
+                "key": key,
+                "data": data,
+                "content_type": content_type,
+                "aws_profile": self.aws_profile,
+            }
         )
 
 
@@ -24,7 +30,9 @@ class _AzureSpy:
         self.connection_string = connection_string
         self.calls = []
 
-    def upload_bytes(self, *, container: str, blob_path: str, data: bytes, content_type: str) -> None:
+    def upload_bytes(
+        self, *, container: str, blob_path: str, data: bytes, content_type: str
+    ) -> None:
         self.calls.append(
             {
                 "account_name": self.account_name,
@@ -54,7 +62,9 @@ def test_upload_dispatch_to_s3(monkeypatch: pytest.MonkeyPatch):
 
     uri = "s3://bkt/prefix/run1/results.json"
     payload = b'{"ok": true}'
-    mod.upload_to_result_uri(result_uri=uri, data=payload, content_type="application/json", aws_profile="prof1")
+    mod.upload_to_result_uri(
+        result_uri=uri, data=payload, content_type="application/json", aws_profile="prof1"
+    )
 
     inst = created["inst"]
     assert len(inst.calls) == 1
@@ -70,7 +80,9 @@ def test_upload_dispatch_to_azureblob(monkeypatch: pytest.MonkeyPatch):
     created = {}
 
     def _ctor(account_name: str, auth: str = "managed_identity", connection_string=None):
-        created["inst"] = _AzureSpy(account_name=account_name, auth=auth, connection_string=connection_string)
+        created["inst"] = _AzureSpy(
+            account_name=account_name, auth=auth, connection_string=connection_string
+        )
         return created["inst"]
 
     monkeypatch.setattr(mod, "AzureBlobUploader", _ctor)

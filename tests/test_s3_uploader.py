@@ -7,6 +7,7 @@ Run:
     pytest tests/test_s3_uploader.py \
       --cov=omni_tool_runtime/uploaders/s3_uploader --cov-report=term-missing -v
 """
+
 from __future__ import annotations
 
 import sys
@@ -23,12 +24,13 @@ MOD = "omni_tool_runtime.uploaders.s3_uploader"
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _mock_boto3():
     """Return (mock_boto3, mock_session, mock_s3_client) wired together."""
-    mock_s3      = MagicMock()
+    mock_s3 = MagicMock()
     mock_session = MagicMock()
     mock_session.client.return_value = mock_s3
-    mock_boto3   = MagicMock()
+    mock_boto3 = MagicMock()
     mock_boto3.Session.return_value = mock_session
     return mock_boto3, mock_session, mock_s3
 
@@ -51,6 +53,7 @@ def _call(uploader: S3Uploader, **kw):
 # Dataclass construction
 # ---------------------------------------------------------------------------
 
+
 class TestS3UploaderConstruction:
     def test_default_profile_is_none(self):
         assert S3Uploader().aws_profile is None
@@ -67,6 +70,7 @@ class TestS3UploaderConstruction:
 # Missing boto3
 # ---------------------------------------------------------------------------
 
+
 class TestMissingBoto3:
     def test_raises_runtime_error(self):
         uploader = S3Uploader()
@@ -77,16 +81,20 @@ class TestMissingBoto3:
 
     def test_error_message_mentions_boto3(self):
         uploader = S3Uploader()
-        with patch.dict(sys.modules, {"boto3": None}), \
-             pytest.raises(RuntimeError, match="boto3 not installed"):
+        with (
+            patch.dict(sys.modules, {"boto3": None}),
+            pytest.raises(RuntimeError, match="boto3 not installed"),
+        ):
             uploader.upload_bytes(
                 bucket="b", key="k.json", data=b"x", content_type="application/json"
             )
 
     def test_error_message_mentions_install_extra(self):
         uploader = S3Uploader()
-        with patch.dict(sys.modules, {"boto3": None}), \
-             pytest.raises(RuntimeError, match="omnibioai-tool-runtime"):
+        with (
+            patch.dict(sys.modules, {"boto3": None}),
+            pytest.raises(RuntimeError, match="omnibioai-tool-runtime"),
+        ):
             uploader.upload_bytes(
                 bucket="b", key="k.json", data=b"x", content_type="application/json"
             )
@@ -95,6 +103,7 @@ class TestMissingBoto3:
 # ---------------------------------------------------------------------------
 # Session construction
 # ---------------------------------------------------------------------------
+
 
 class TestSessionConstruction:
     def test_session_created(self):
@@ -122,6 +131,7 @@ class TestSessionConstruction:
 # ---------------------------------------------------------------------------
 # put_object forwarding
 # ---------------------------------------------------------------------------
+
 
 class TestPutObject:
     def test_put_object_called(self):
@@ -173,6 +183,7 @@ class TestPutObject:
 # ---------------------------------------------------------------------------
 # Full end-to-end flow
 # ---------------------------------------------------------------------------
+
 
 class TestEndToEnd:
     def test_full_flow_no_profile(self):
