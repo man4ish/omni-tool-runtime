@@ -5,7 +5,6 @@ import re
 import sys
 from pathlib import Path
 
-
 TEMPLATE_RUN = '''from __future__ import annotations
 
 import json

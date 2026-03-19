@@ -8,14 +8,14 @@ Run:
 """
 from __future__ import annotations
 
-import pytest
-from unittest.mock import MagicMock, patch, call
+from unittest.mock import MagicMock, patch
 
-import omni_tool_runtime.upload_result as _mod
+import pytest
+
 from omni_tool_runtime.upload_result import (
     _normalize_result_uri,
-    _parse_s3,
     _parse_azureblob,
+    _parse_s3,
     upload_to_result_uri,
 )
 

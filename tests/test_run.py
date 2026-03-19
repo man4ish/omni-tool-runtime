@@ -7,14 +7,12 @@ Run:
 """
 from __future__ import annotations
 
-import sys
 import types
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 
 from omni_tool_runtime.run import main
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -69,9 +67,9 @@ class TestToolIdMissing:
         assert "TOOL_ID" in capsys.readouterr().err
 
     def test_import_not_called_when_tool_id_missing(self):
-        with patch.dict("os.environ", {}, clear=True):
-            with patch("omni_tool_runtime.run.importlib.import_module") as mock_import:
-                main()
+        with patch.dict("os.environ", {}, clear=True), \
+             patch("omni_tool_runtime.run.importlib.import_module") as mock_import:
+            main()
         mock_import.assert_not_called()
 
 
@@ -82,9 +80,9 @@ class TestToolIdMissing:
 class TestImportFailure:
     def _call(self, tool_id="bad_tool", exc=None):
         exc = exc or ImportError("no module named tools.bad_tool.run")
-        with patch.dict("os.environ", {"TOOL_ID": tool_id}, clear=True):
-            with patch("omni_tool_runtime.run.importlib.import_module", side_effect=exc):
-                return main()
+        with patch.dict("os.environ", {"TOOL_ID": tool_id}, clear=True), \
+             patch("omni_tool_runtime.run.importlib.import_module", side_effect=exc):
+            return main()
 
     def test_returns_2_on_import_error(self):
         assert self._call() == 2
@@ -96,31 +94,31 @@ class TestImportFailure:
         assert self._call(exc=ModuleNotFoundError("nope")) == 2
 
     def test_stderr_contains_module_name(self, capsys):
-        with patch.dict("os.environ", {"TOOL_ID": "my_tool"}, clear=True):
-            with patch("omni_tool_runtime.run.importlib.import_module",
-                       side_effect=ImportError("x")):
-                main()
+        with patch.dict("os.environ", {"TOOL_ID": "my_tool"}, clear=True), \
+             patch("omni_tool_runtime.run.importlib.import_module",
+                   side_effect=ImportError("x")):
+            main()
         assert "tools.my_tool.run" in capsys.readouterr().err
 
     def test_stderr_contains_error_text(self, capsys):
-        with patch.dict("os.environ", {"TOOL_ID": "t"}, clear=True):
-            with patch("omni_tool_runtime.run.importlib.import_module",
-                       side_effect=ImportError("specific error message")):
-                main()
+        with patch.dict("os.environ", {"TOOL_ID": "t"}, clear=True), \
+             patch("omni_tool_runtime.run.importlib.import_module",
+                   side_effect=ImportError("specific error message")):
+            main()
         assert "specific error message" in capsys.readouterr().err
 
     def test_import_called_with_correct_module_path(self):
-        with patch.dict("os.environ", {"TOOL_ID": "my_tool"}, clear=True):
-            with patch("omni_tool_runtime.run.importlib.import_module",
-                       side_effect=ImportError("x")) as mock_import:
-                main()
+        with patch.dict("os.environ", {"TOOL_ID": "my_tool"}, clear=True), \
+             patch("omni_tool_runtime.run.importlib.import_module",
+                   side_effect=ImportError("x")) as mock_import:
+            main()
         mock_import.assert_called_once_with("tools.my_tool.run")
 
     def test_tool_id_stripped_before_module_path_built(self):
-        with patch.dict("os.environ", {"TOOL_ID": "  spaced_tool  "}, clear=True):
-            with patch("omni_tool_runtime.run.importlib.import_module",
-                       side_effect=ImportError("x")) as mock_import:
-                main()
+        with patch.dict("os.environ", {"TOOL_ID": "  spaced_tool  "}, clear=True), \
+             patch("omni_tool_runtime.run.importlib.import_module",
+                   side_effect=ImportError("x")) as mock_import:
+            main()
         mock_import.assert_called_once_with("tools.spaced_tool.run")
 
 
@@ -131,9 +129,9 @@ class TestImportFailure:
 class TestModuleMissingMain:
     def _call(self, tool_id="t"):
         mod = _make_mod(has_main=False)
-        with patch.dict("os.environ", {"TOOL_ID": tool_id}, clear=True):
-            with patch("omni_tool_runtime.run.importlib.import_module", return_value=mod):
-                return main()
+        with patch.dict("os.environ", {"TOOL_ID": tool_id}, clear=True), \
+             patch("omni_tool_runtime.run.importlib.import_module", return_value=mod):
+            return main()
 
     def test_returns_2_when_no_main(self):
         assert self._call() == 2
@@ -148,9 +146,9 @@ class TestModuleMissingMain:
 
     def test_main_not_invoked_when_absent(self):
         mod = _make_mod(has_main=False)
-        with patch.dict("os.environ", {"TOOL_ID": "t"}, clear=True):
-            with patch("omni_tool_runtime.run.importlib.import_module", return_value=mod):
-                main()
+        with patch.dict("os.environ", {"TOOL_ID": "t"}, clear=True), \
+             patch("omni_tool_runtime.run.importlib.import_module", return_value=mod):
+            main()
         # No .main attribute means nothing to assert; reaching here without
         # AttributeError is the passing condition.
 
@@ -162,9 +160,9 @@ class TestModuleMissingMain:
 class TestSuccessfulRun:
     def _call(self, tool_id="good_tool", main_return=0):
         mod = _make_mod(main_return=main_return)
-        with patch.dict("os.environ", {"TOOL_ID": tool_id}, clear=True):
-            with patch("omni_tool_runtime.run.importlib.import_module", return_value=mod):
-                return main(), mod
+        with patch.dict("os.environ", {"TOOL_ID": tool_id}, clear=True), \
+             patch("omni_tool_runtime.run.importlib.import_module", return_value=mod):
+            return main(), mod
 
     def test_returns_0_on_success(self):
         result, _ = self._call(main_return=0)
@@ -186,9 +184,9 @@ class TestSuccessfulRun:
         # mod.main() returns a string "0"; run.main() should cast via int()
         mod = _make_mod()
         mod.main.return_value = "0"
-        with patch.dict("os.environ", {"TOOL_ID": "t"}, clear=True):
-            with patch("omni_tool_runtime.run.importlib.import_module", return_value=mod):
-                result = main()
+        with patch.dict("os.environ", {"TOOL_ID": "t"}, clear=True), \
+             patch("omni_tool_runtime.run.importlib.import_module", return_value=mod):
+            result = main()
         assert result == 0
         assert isinstance(result, int)
 
@@ -198,10 +196,10 @@ class TestSuccessfulRun:
 
     def test_import_called_with_correct_path(self):
         mod = _make_mod()
-        with patch.dict("os.environ", {"TOOL_ID": "specific_tool"}, clear=True):
-            with patch("omni_tool_runtime.run.importlib.import_module",
-                       return_value=mod) as mock_import:
-                main()
+        with patch.dict("os.environ", {"TOOL_ID": "specific_tool"}, clear=True), \
+             patch("omni_tool_runtime.run.importlib.import_module",
+                   return_value=mod) as mock_import:
+            main()
         mock_import.assert_called_once_with("tools.specific_tool.run")
 
     def test_nonzero_exit_code_propagated(self):
@@ -216,20 +214,19 @@ class TestSuccessfulRun:
 class TestMainBlock:
     def test_raises_system_exit(self):
         mod = _make_mod(main_return=0)
-        with patch.dict("os.environ", {"TOOL_ID": "t"}, clear=True):
-            with patch("omni_tool_runtime.run.importlib.import_module", return_value=mod):
-                with patch("omni_tool_runtime.run.main", return_value=0):
-                    with pytest.raises(SystemExit) as exc_info:
-                        # Re-run the __main__ guard by executing the module as __main__
-                        import runpy
-                        runpy.run_module("omni_tool_runtime.run", run_name="__main__",
-                                         alter_sys=False)
+        with patch.dict("os.environ", {"TOOL_ID": "t"}, clear=True), \
+             patch("omni_tool_runtime.run.importlib.import_module", return_value=mod), \
+             patch("omni_tool_runtime.run.main", return_value=0), \
+             pytest.raises(SystemExit) as exc_info:
+            import runpy
+            runpy.run_module("omni_tool_runtime.run", run_name="__main__",
+                             alter_sys=False)
         assert exc_info.value.code == 0
 
     def test_raises_system_exit_with_error_code(self):
-        with patch("omni_tool_runtime.run.main", return_value=2):
-            with pytest.raises(SystemExit) as exc_info:
-                import runpy
-                runpy.run_module("omni_tool_runtime.run", run_name="__main__",
-                                 alter_sys=False)
+        with patch("omni_tool_runtime.run.main", return_value=2), \
+             pytest.raises(SystemExit) as exc_info:
+            import runpy
+            runpy.run_module("omni_tool_runtime.run", run_name="__main__",
+                             alter_sys=False)
         assert exc_info.value.code == 2

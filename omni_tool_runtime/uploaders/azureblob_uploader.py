@@ -1,14 +1,13 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Optional
 
 
 @dataclass
 class AzureBlobUploader:
     account_name: str
     auth: str = "managed_identity"  # managed_identity | connection_string
-    connection_string: Optional[str] = None
+    connection_string: str | None = None
 
     def _client(self):
         has_cs = bool(self.connection_string)

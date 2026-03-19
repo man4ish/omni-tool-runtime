@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Optional, Tuple
 from urllib.parse import urlparse
 
 
@@ -10,7 +9,7 @@ from urllib.parse import urlparse
 class ParsedResultURI:
     scheme: str
     account_or_bucket: str
-    container: Optional[str]
+    container: str | None
     path: str  # key/blob path
 
 

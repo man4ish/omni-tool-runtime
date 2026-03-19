@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import os
-from typing import Optional
 from urllib.parse import urlparse
 
 from omni_tool_runtime.result_uri import parse_result_uri
@@ -67,13 +66,13 @@ def _parse_azureblob(uri: str) -> tuple[str, str, str]:
 def upload_to_result_uri(
     *,
     result_uri: str,
-    content: Optional[bytes] = None,
-    data: Optional[bytes] = None,
+    content: bytes | None = None,
+    data: bytes | None = None,
     content_type: str = "application/json",
-    aws_profile: Optional[str] = None,
+    aws_profile: str | None = None,
     # ---- Azure overrides (new; optional) ----
     azure_auth: str = "managed_identity",
-    azure_connection_string: Optional[str] = None,
+    azure_connection_string: str | None = None,
 ) -> None:
     """
     Upload bytes to RESULT_URI.

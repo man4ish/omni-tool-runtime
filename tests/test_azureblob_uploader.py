@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import sys
 import types
-from unittest.mock import MagicMock, patch, call
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -43,7 +43,7 @@ def _install_azure_stubs():
 _azure_storage_blob_stub, _azure_identity_stub = _install_azure_stubs()
 
 # Now safe to import
-from omni_tool_runtime.uploaders.azureblob_uploader import AzureBlobUploader
+from omni_tool_runtime.uploaders.azureblob_uploader import AzureBlobUploader  # noqa: E402
 
 MOD = "omni_tool_runtime.uploaders.azureblob_uploader"
 
@@ -186,25 +186,25 @@ class TestClientManagedIdentity:
 class TestClientMissingPackages:
     def test_missing_azure_storage_blob_raises(self):
         uploader = _make_uploader(auth="managed_identity")
-        with patch.dict(sys.modules, {"azure.storage.blob": None}):
-            with pytest.raises(RuntimeError, match="azure-storage-blob not installed"):
-                uploader._client()
+        with patch.dict(sys.modules, {"azure.storage.blob": None}), \
+             pytest.raises(RuntimeError, match="azure-storage-blob not installed"):
+            uploader._client()
 
     def test_missing_azure_identity_raises(self):
         uploader = _make_uploader(auth="managed_identity")
         # azure.storage.blob is present but azure.identity is missing
         real_bsc = _azure_storage_blob_stub.BlobServiceClient
         _azure_storage_blob_stub.BlobServiceClient = MagicMock()
-        with patch.dict(sys.modules, {"azure.identity": None}):
-            with pytest.raises(RuntimeError, match="azure-identity not installed"):
-                uploader._client()
+        with patch.dict(sys.modules, {"azure.identity": None}), \
+             pytest.raises(RuntimeError, match="azure-identity not installed"):
+            uploader._client()
         _azure_storage_blob_stub.BlobServiceClient = real_bsc
 
     def test_missing_blob_error_message_mentions_install(self):
         uploader = _make_uploader(auth="managed_identity")
-        with patch.dict(sys.modules, {"azure.storage.blob": None}):
-            with pytest.raises(RuntimeError, match="omnibioai-tool-runtime"):
-                uploader._client()
+        with patch.dict(sys.modules, {"azure.storage.blob": None}), \
+             pytest.raises(RuntimeError, match="omnibioai-tool-runtime"):
+            uploader._client()
 
 
 # ---------------------------------------------------------------------------

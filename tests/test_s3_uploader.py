@@ -10,8 +10,7 @@ Run:
 from __future__ import annotations
 
 import sys
-import types
-from unittest.mock import MagicMock, patch, call
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -71,27 +70,26 @@ class TestS3UploaderConstruction:
 class TestMissingBoto3:
     def test_raises_runtime_error(self):
         uploader = S3Uploader()
-        with patch.dict(sys.modules, {"boto3": None}):
-            with pytest.raises(RuntimeError):
-                uploader.upload_bytes(
-                    bucket="b", key="k.json", data=b"x", content_type="application/json"
-                )
+        with patch.dict(sys.modules, {"boto3": None}), pytest.raises(RuntimeError):
+            uploader.upload_bytes(
+                bucket="b", key="k.json", data=b"x", content_type="application/json"
+            )
 
     def test_error_message_mentions_boto3(self):
         uploader = S3Uploader()
-        with patch.dict(sys.modules, {"boto3": None}):
-            with pytest.raises(RuntimeError, match="boto3 not installed"):
-                uploader.upload_bytes(
-                    bucket="b", key="k.json", data=b"x", content_type="application/json"
-                )
+        with patch.dict(sys.modules, {"boto3": None}), \
+             pytest.raises(RuntimeError, match="boto3 not installed"):
+            uploader.upload_bytes(
+                bucket="b", key="k.json", data=b"x", content_type="application/json"
+            )
 
     def test_error_message_mentions_install_extra(self):
         uploader = S3Uploader()
-        with patch.dict(sys.modules, {"boto3": None}):
-            with pytest.raises(RuntimeError, match="omnibioai-tool-runtime"):
-                uploader.upload_bytes(
-                    bucket="b", key="k.json", data=b"x", content_type="application/json"
-                )
+        with patch.dict(sys.modules, {"boto3": None}), \
+             pytest.raises(RuntimeError, match="omnibioai-tool-runtime"):
+            uploader.upload_bytes(
+                bucket="b", key="k.json", data=b"x", content_type="application/json"
+            )
 
 
 # ---------------------------------------------------------------------------

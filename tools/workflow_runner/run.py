@@ -5,9 +5,8 @@ import json
 import os
 import shutil
 import subprocess
-import sys
 from pathlib import Path
-from typing import Any, Dict, Tuple
+from typing import Any
 from urllib.parse import urlparse
 
 
@@ -15,7 +14,7 @@ def _env(name: str, default: str = "") -> str:
     return str(os.getenv(name, default) or default)
 
 
-def _load_json_env(name: str, default: Dict[str, Any] | None = None) -> Dict[str, Any]:
+def _load_json_env(name: str, default: dict[str, Any] | None = None) -> dict[str, Any]:
     raw = _env(name, "")
     if not raw:
         return default or {}
@@ -30,7 +29,7 @@ def _ensure_dir(p: Path) -> None:
     p.mkdir(parents=True, exist_ok=True)
 
 
-def _normalize_result_uri(result_uri: str) -> Tuple[str, str]:
+def _normalize_result_uri(result_uri: str) -> tuple[str, str]:
     """
     Returns (results_uri, outputs_uri)
 
@@ -50,7 +49,7 @@ def _normalize_result_uri(result_uri: str) -> Tuple[str, str]:
     return f"{s}/results.json", f"{s}/outputs.json"
 
 
-def _write_json(path: Path, obj: Dict[str, Any]) -> None:
+def _write_json(path: Path, obj: dict[str, Any]) -> None:
     path.write_text(json.dumps(obj, indent=2, sort_keys=True))
 
 
@@ -77,7 +76,7 @@ def _upload_uri(uri: str, data: bytes, content_type: str = "application/json") -
         # Auth: connection string (typical for dev) or managed identity if you extend later
         from azure.storage.blob import BlobServiceClient  # type: ignore
 
-        account = u.netloc
+        # account = u.netloc
         path = u.path.lstrip("/")
         if "/" not in path:
             raise RuntimeError(f"Bad azureblob URI (need container/blob): {uri}")
@@ -103,7 +102,7 @@ def _upload_uri(uri: str, data: bytes, content_type: str = "application/json") -
     raise RuntimeError(f"Unsupported RESULT_URI scheme: {u.scheme} ({uri})")
 
 
-def _run_command(cmd: list[str] | str, cwd: Path, env: Dict[str, str]) -> int:
+def _run_command(cmd: list[str] | str, cwd: Path, env: dict[str, str]) -> int:
     if isinstance(cmd, str):
         p = subprocess.run(cmd, shell=True, cwd=str(cwd), env=env)
         return int(p.returncode)
@@ -177,7 +176,7 @@ def main() -> int:
 
     # Expect outputs.json per your design
     outputs_path = exec_root / "outputs.json"
-    outputs_obj: Dict[str, Any]
+    outputs_obj: dict[str, Any]
     if outputs_path.exists():
         try:
             outputs_obj = json.loads(outputs_path.read_text())

@@ -4,6 +4,7 @@ import importlib
 import os
 import sys
 
+
 def main() -> int:
     tool_id = (os.getenv("TOOL_ID") or "").strip()
     if not tool_id:

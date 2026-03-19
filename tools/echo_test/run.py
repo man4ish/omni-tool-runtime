@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import json
 import os
-import sys
 
 from omni_tool_runtime.upload_result import upload_to_result_uri
 

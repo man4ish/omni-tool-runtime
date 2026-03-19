@@ -39,7 +39,7 @@ class _AzureSpy:
 
 
 def test_upload_dispatch_to_s3(monkeypatch: pytest.MonkeyPatch):
-    s3_spy = _S3Spy(aws_profile="prof1")
+    _s3_spy = _S3Spy(aws_profile="prof1")
 
     # Patch constructor used inside upload_to_result_uri
     monkeypatch.setattr(mod, "S3Uploader", lambda aws_profile=None: _S3Spy(aws_profile=aws_profile))

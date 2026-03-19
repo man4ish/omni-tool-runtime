@@ -2,12 +2,11 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Optional
 
 
 @dataclass
 class S3Uploader:
-    aws_profile: Optional[str] = None
+    aws_profile: str | None = None
 
     def upload_bytes(self, *, bucket: str, key: str, data: bytes, content_type: str) -> None:
         try:

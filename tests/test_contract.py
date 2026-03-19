@@ -8,10 +8,10 @@ Run:
 from __future__ import annotations
 
 import json
+
 import pytest
 
 from omni_tool_runtime.contract import ToolContract, read_contract_from_env
-
 
 # ---------------------------------------------------------------------------
 # ToolContract dataclass

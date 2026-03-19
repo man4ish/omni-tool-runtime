@@ -4,15 +4,15 @@ from __future__ import annotations
 import json
 import os
 from dataclasses import dataclass
-from typing import Any, Dict
+from typing import Any
 
 
 @dataclass
 class ToolContract:
     tool_id: str
     run_id: str
-    inputs: Dict[str, Any]
-    resources: Dict[str, Any]
+    inputs: dict[str, Any]
+    resources: dict[str, Any]
     result_uri: str
 
 
