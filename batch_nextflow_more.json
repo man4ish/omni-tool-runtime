@@ -1,0 +1,19 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "NextflowAwsBatchExecutorMore",
+      "Effect": "Allow",
+      "Action": [
+        "batch:SubmitJob",
+        "batch:DescribeJobs",
+        "batch:TerminateJob",
+        "batch:DescribeJobDefinitions",
+        "batch:DescribeJobQueues",
+        "batch:DescribeComputeEnvironments",
+        "batch:RegisterJobDefinition"
+      ],
+      "Resource": "*"
+    }
+  ]
+}
