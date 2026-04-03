@@ -15,6 +15,14 @@ Requires-Dist: boto3>=1.26; extra == "aws"
 Provides-Extra: azure
 Requires-Dist: azure-identity>=1.15; extra == "azure"
 Requires-Dist: azure-storage-blob>=12.19; extra == "azure"
+Provides-Extra: dev
+Requires-Dist: pytest>=8.0; extra == "dev"
+Requires-Dist: pytest-cov>=5.0; extra == "dev"
+Requires-Dist: ruff>=0.4; extra == "dev"
+Requires-Dist: mypy>=1.10; extra == "dev"
+Requires-Dist: boto3-stubs[s3]>=1.26; extra == "dev"
+Requires-Dist: azure-storage-blob>=12.19; extra == "dev"
+Requires-Dist: azure-identity>=1.15; extra == "dev"
 
 # Omni Tool Runtime
 
