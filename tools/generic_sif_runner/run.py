@@ -35,6 +35,16 @@ def _fetch_sif(sif_uri: str, cache_dir: Path) -> Path:
     """
     uri = _resolve_env_refs(sif_uri)
 
+    # ✅ If local path doesn't exist but SIF_BASE is set
+    # → rewrite to S3/Azure URI automatically
+    sif_base = _env("SIF_BASE", "").strip()
+    if sif_base and not uri.startswith("s3://") and not uri.startswith("azureblob://"):
+        if not Path(uri).exists():
+            # Extract just the filename
+            sif_name = Path(uri).name
+            uri = f"{sif_base.rstrip('/')}/{sif_name}"
+            print(f"[generic_sif_runner] local SIF not found, using: {uri}")
+
     # Local path
     if not uri.startswith("s3://") and not uri.startswith("azureblob://"):
         p = Path(uri)
@@ -65,19 +75,17 @@ def _fetch_sif(sif_uri: str, cache_dir: Path) -> Path:
 
 
 def _fetch_from_s3(uri: str, dest: Path) -> None:
-    # Try awscli first (fastest for large files)
-    r = subprocess.run(
-        ["aws", "s3", "cp", uri, str(dest), "--no-progress"],
-        capture_output=True, text=True
-    )
-    if r.returncode == 0:
-        return
-    # Fallback to boto3
+    # Use boto3 directly (no aws CLI needed in container)
     try:
         import boto3
         from urllib.parse import urlparse
         u = urlparse(uri)
-        boto3.client("s3").download_file(u.netloc, u.path.lstrip("/"), str(dest))
+        bucket = u.netloc
+        key = u.path.lstrip("/")
+        print(f"[sif_cache] boto3 download: s3://{bucket}/{key} → {dest}")
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        boto3.client("s3").download_file(bucket, key, str(dest))
+        print(f"[sif_cache] download complete: {dest.stat().st_size / 1e6:.0f}MB")
     except Exception as e:
         raise RuntimeError(f"S3 download failed for {uri}: {e}")
 
@@ -140,13 +148,23 @@ def _resolve_command(
     template_parts: list[str],
     inputs: Dict[str, Any],
     work_dir: str,
+    resources: Dict[str, Any] = None,
 ) -> list[str]:
+    # Build context with defaults for common placeholders
+    resources = resources or {}
+    context = {
+        "work_dir":  work_dir,
+        "threads":   str(resources.get("cpu", 1)),
+        "cpu":       str(resources.get("cpu", 1)),
+        "ram_gb":    str(resources.get("ram_gb", 4)),
+        "memory":    str(resources.get("ram_gb", 4)),
+    }
+    context.update({k: str(v) for k, v in inputs.items()})
+
     resolved = []
     for part in template_parts:
         try:
-            resolved.append(
-                _resolve_env_refs(part.format(work_dir=work_dir, **inputs))
-            )
+            resolved.append(_resolve_env_refs(part.format(**context)))
         except KeyError as e:
             raise RuntimeError(
                 f"Missing input for command placeholder: {e}"
@@ -221,7 +239,7 @@ def main() -> int:
 
     # ── Resolve command template ──────────────────────────────
     try:
-        resolved_cmd = _resolve_command(cmd_template, inputs, str(work_dir))
+        resolved_cmd = _resolve_command(cmd_template, inputs, str(work_dir), resources)
     except Exception as e:
         print(f"ERROR: {e}", file=sys.stderr)
         return 2
