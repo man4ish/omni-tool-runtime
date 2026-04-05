@@ -16,6 +16,8 @@ omni_tool_runtime/uploaders/azureblob_uploader.py
 omni_tool_runtime/uploaders/s3_uploader.py
 tests/test_azureblob_uploader.py
 tests/test_contract.py
+tests/test_echo_run.py
+tests/test_generic_sif_runner_run.py
 tests/test_result_uri_parse.py
 tests/test_run.py
 tests/test_s3_uploader.py
