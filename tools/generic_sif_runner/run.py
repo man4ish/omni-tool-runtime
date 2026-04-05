@@ -231,11 +231,18 @@ def main() -> int:
 
     # ── Fetch SIF (local or cloud) ────────────────────────────
     cache_dir = Path(_env("SIF_CACHE_DIR", "/tmp/omnibioai_sif_cache"))
+    docker_image = slurm_def.get("docker_image", "")
     try:
         local_sif = _fetch_sif(sif_uri, cache_dir)
+        use_docker = False
     except Exception as e:
-        print(f"ERROR: SIF fetch failed: {e}", file=sys.stderr)
-        return 2
+        if docker_image:
+            print(f"[generic_sif_runner] SIF unavailable, using Docker: {docker_image}")
+            use_docker = True
+            local_sif = None
+        else:
+            print(f"ERROR: SIF fetch failed: {e}", file=sys.stderr)
+            return 2
 
     # ── Resolve command template ──────────────────────────────
     try:
@@ -244,14 +251,37 @@ def main() -> int:
         print(f"ERROR: {e}", file=sys.stderr)
         return 2
 
-    # ── Run via Singularity ───────────────────────────────────
+    # ── Run via Docker or Singularity ────────────────────────
     cpu = int(resources.get("cpu", 1) or 1)
-    singularity_cmd = [
-        "singularity", "exec",
-        "--bind", f"{work_dir}:{work_dir}",
-        "--bind", f"{work_dir}:/tmp",   # some tools write to /tmp
-        str(local_sif),
-    ] + resolved_cmd
+    # Force Docker if docker_image set and SIF is wrong arch
+    sif_arch = str(local_sif).split("_")[-1].replace(".sif","") if local_sif else ""
+    import platform
+    host_arch = platform.machine()  # x86_64 or aarch64
+    arch_mismatch = (
+        (sif_arch == "arm64" and host_arch == "x86_64") or
+        (sif_arch == "amd64" and host_arch == "aarch64")
+    )
+    if arch_mismatch and docker_image:
+        print(f"[generic_sif_runner] arch mismatch ({sif_arch} on {host_arch}), using Docker: {docker_image}")
+        use_docker = True
+
+    if use_docker:
+        singularity_cmd = [
+            "docker", "run", "--rm",
+            "-v", f"{work_dir}:{work_dir}",
+            "-v", f"{work_dir}:/tmp",
+            "-w", str(work_dir),
+            docker_image,
+        ] + resolved_cmd
+    else:
+        singularity_cmd = [
+            "singularity", "exec",
+            "--no-home",
+            "--writable-tmpfs",
+            "--bind", f"{work_dir}:{work_dir}",
+            "--bind", f"{work_dir}:/tmp",
+            str(local_sif),
+        ] + resolved_cmd
 
     # Bind any input file paths that exist on host
     for v in inputs.values():

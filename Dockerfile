@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1
-FROM python:3.11-slim-bookworm
+FROM --platform=linux/amd64 python:3.11-slim-bookworm
 
 WORKDIR /app
 
@@ -18,30 +18,21 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
       squashfs-tools \
       fuse2fs \
       fuse \
+      libfuse3-3 \
       uidmap \
-      libseccomp-dev \
-      libglib2.0-dev \
-      pkg-config \
+      libseccomp2 \
+      libglib2.0-0 \
+      fakeroot \
+      docker.io \
     && rm -rf /var/lib/apt/lists/*
 
-# ---- Install Go ----
-RUN ARCH=$(dpkg --print-architecture) \
-    && curl -fsSL \
-      "https://go.dev/dl/go1.21.0.linux-${ARCH}.tar.gz" \
-      -o go.tar.gz \
-    && tar -C /usr/local -xzf go.tar.gz \
-    && rm go.tar.gz
-
-ENV PATH="/usr/local/go/bin:$PATH"
-
-# ---- Build Apptainer from source ----
-RUN git clone --depth 1 --branch v1.4.5 \
-      https://github.com/apptainer/apptainer.git /tmp/apptainer \
-    && cd /tmp/apptainer \
-    && ./mconfig --without-suid \
-    && make -C builddir \
-    && make -C builddir install \
-    && rm -rf /tmp/apptainer \
+# ---- Install Apptainer amd64 deb ----
+RUN curl -fsSL -o apptainer.deb \
+      "https://github.com/apptainer/apptainer/releases/download/v1.3.4/apptainer_1.3.4_amd64.deb" \
+    && apt-get update -qq \
+    && dpkg -i apptainer.deb || apt-get install -f -y \
+    && rm apptainer.deb \
+    && rm -rf /var/lib/apt/lists/* \
     && apptainer --version
 
 # ---- Install Nextflow ----
