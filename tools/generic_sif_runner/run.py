@@ -266,13 +266,10 @@ def main() -> int:
         use_docker = True
 
     if use_docker:
-        singularity_cmd = [
-            "docker", "run", "--rm",
-            "-v", f"{work_dir}:{work_dir}",
-            "-v", f"{work_dir}:/tmp",
-            "-w", str(work_dir),
-            docker_image,
-        ] + resolved_cmd
+        # Run tool directly (we ARE inside the tool container on Fargate!)
+        # No Docker-in-Docker needed - just exec the command directly
+        print(f"[generic_sif_runner] running directly (no singularity): {resolved_cmd}")
+        singularity_cmd = resolved_cmd
     else:
         singularity_cmd = [
             "singularity", "exec",
