@@ -244,6 +244,26 @@ def main() -> int:
             print(f"ERROR: SIF fetch failed: {e}", file=sys.stderr)
             return 2
 
+    # ── Download S3 inputs to work_dir ───────────────────────
+    local_inputs = {}
+    for key, val in inputs.items():
+        if isinstance(val, str) and val.startswith("s3://"):
+            local_file = work_dir / Path(val).name
+            print(f"[generic_sif_runner] downloading input {key}: {val} → {local_file}")
+            try:
+                import boto3
+                from urllib.parse import urlparse
+                u = urlparse(val)
+                boto3.client("s3").download_file(u.netloc, u.path.lstrip("/"), str(local_file))
+                local_inputs[key] = str(local_file)
+                print(f"[generic_sif_runner] downloaded: {local_file}")
+            except Exception as e:
+                print(f"[generic_sif_runner] S3 download failed for {val}: {e}")
+                local_inputs[key] = val
+        else:
+            local_inputs[key] = val
+    inputs = local_inputs
+
     # ── Resolve command template ──────────────────────────────
     try:
         resolved_cmd = _resolve_command(cmd_template, inputs, str(work_dir), resources)
@@ -270,6 +290,7 @@ def main() -> int:
         # No Docker-in-Docker needed - just exec the command directly
         print(f"[generic_sif_runner] running directly (no singularity): {resolved_cmd}")
         singularity_cmd = resolved_cmd
+        local_sif = None  # No SIF needed for direct exec
     else:
         singularity_cmd = [
             "singularity", "exec",
@@ -280,18 +301,19 @@ def main() -> int:
             str(local_sif),
         ] + resolved_cmd
 
-    # Bind any input file paths that exist on host
-    for v in inputs.values():
-        if isinstance(v, str) and Path(v).exists():
-            parent = str(Path(v).parent)
-            singularity_cmd.insert(
-                singularity_cmd.index(str(local_sif)),
-                "--bind"
-            )
-            singularity_cmd.insert(
-                singularity_cmd.index(str(local_sif)),
-                f"{parent}:{parent}:ro"
-            )
+    # Bind any input file paths that exist on host (only for Singularity)
+    if not use_docker and local_sif:
+        for v in inputs.values():
+            if isinstance(v, str) and Path(v).exists():
+                parent = str(Path(v).parent)
+                singularity_cmd.insert(
+                    singularity_cmd.index(str(local_sif)),
+                    "--bind"
+                )
+                singularity_cmd.insert(
+                    singularity_cmd.index(str(local_sif)),
+                    f"{parent}:{parent}:ro"
+                )
 
     print(f"[generic_sif_runner] cmd: {' '.join(singularity_cmd)}")
 

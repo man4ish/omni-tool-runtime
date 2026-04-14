@@ -24,6 +24,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
       libglib2.0-0 \
       fakeroot \
       docker.io \
+      fastqc \
     && rm -rf /var/lib/apt/lists/*
 
 # ---- Install Apptainer amd64 deb ----
