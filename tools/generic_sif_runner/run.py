@@ -244,7 +244,7 @@ def main() -> int:
             print(f"ERROR: SIF fetch failed: {e}", file=sys.stderr)
             return 2
 
-    # ── Download S3 inputs to work_dir ───────────────────────
+    # ── Download S3/Azure inputs to work_dir ─────────────────
     local_inputs = {}
     for key, val in inputs.items():
         if isinstance(val, str) and val.startswith("s3://"):
@@ -259,6 +259,33 @@ def main() -> int:
                 print(f"[generic_sif_runner] downloaded: {local_file}")
             except Exception as e:
                 print(f"[generic_sif_runner] S3 download failed for {val}: {e}")
+                local_inputs[key] = val
+        elif isinstance(val, str) and val.startswith("azureblob://"):
+            local_file = work_dir / Path(val).name
+            print(f"[generic_sif_runner] downloading input {key}: {val} → {local_file}")
+            try:
+                from urllib.parse import urlparse
+                u = urlparse(val)
+                account = u.netloc
+                path = u.path.lstrip("/")
+                container, blob = path.split("/", 1)
+                cs = _env("AZURE_STORAGE_CONNECTION_STRING") or _env("OMNI_TOOL_RUNTIME_AZURE_CONNECTION_STRING")
+                if cs and "DefaultEndpointsProtocol=" in cs:
+                    from azure.storage.blob import BlobServiceClient
+                    svc = BlobServiceClient.from_connection_string(cs)
+                else:
+                    from azure.storage.blob import BlobServiceClient
+                    from azure.identity import DefaultAzureCredential
+                    svc = BlobServiceClient(
+                        account_url=f"https://{account}.blob.core.windows.net",
+                        credential=DefaultAzureCredential()
+                    )
+                bc = svc.get_blob_client(container=container, blob=blob)
+                local_file.write_bytes(bc.download_blob().readall())
+                local_inputs[key] = str(local_file)
+                print(f"[generic_sif_runner] downloaded: {local_file}")
+            except Exception as e:
+                print(f"[generic_sif_runner] Azure download failed for {val}: {e}")
                 local_inputs[key] = val
         else:
             local_inputs[key] = val
