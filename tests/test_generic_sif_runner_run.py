@@ -216,43 +216,41 @@ class TestFetchSif:
 # ===========================================================================
 class TestFetchFromS3:
 
-    def test_awscli_success_returns_immediately(self, tmp_path):
-        dest = tmp_path / "tool.sif"
-        with patch("subprocess.run") as mock_run:
-            mock_run.return_value = MagicMock(returncode=0)
-            _fetch_from_s3("s3://bucket/tool.sif", dest)
-        mock_run.assert_called_once()
-
-    def test_awscli_called_with_correct_args(self, tmp_path):
-        dest = tmp_path / "tool.sif"
-        with patch("subprocess.run") as mock_run:
-            mock_run.return_value = MagicMock(returncode=0)
-            _fetch_from_s3("s3://bucket/tool.sif", dest)
-        args = mock_run.call_args[0][0]
-        assert args[0] == "aws"
-        assert "s3" in args
-        assert "cp" in args
-
-    def test_awscli_failure_falls_back_to_boto3(self, tmp_path):
-        dest = tmp_path / "tool.sif"
+    def _make_boto3_mock(self):
+        """Return a boto3 mock whose download_file writes the dest file."""
         mock_boto3 = MagicMock()
-        mock_boto3.client.return_value.download_file = MagicMock()
-        with patch("subprocess.run") as mock_run:
-            mock_run.return_value = MagicMock(returncode=1)
-            with patch.dict("sys.modules", {"boto3": mock_boto3}):
-                _fetch_from_s3("s3://bucket/path/tool.sif", dest)
-        mock_boto3.client.return_value.download_file.assert_called_once()
+        mock_boto3.client.return_value.download_file.side_effect = (
+            lambda bucket, key, dst: Path(dst).write_bytes(b"sif-data")
+        )
+        return mock_boto3
+
+    def test_boto3_download_success(self, tmp_path):
+        dest = tmp_path / "tool.sif"
+        with patch.dict("sys.modules", {"boto3": self._make_boto3_mock()}):
+            _fetch_from_s3("s3://bucket/tool.sif", dest)
+        assert dest.exists()
 
     def test_boto3_called_with_correct_bucket_and_key(self, tmp_path):
         dest = tmp_path / "tool.sif"
-        mock_boto3 = MagicMock()
-        with patch("subprocess.run") as mock_run:
-            mock_run.return_value = MagicMock(returncode=1)
-            with patch.dict("sys.modules", {"boto3": mock_boto3}):
-                _fetch_from_s3("s3://my-bucket/my/key.sif", dest)
+        mock_boto3 = self._make_boto3_mock()
+        with patch.dict("sys.modules", {"boto3": mock_boto3}):
+            _fetch_from_s3("s3://my-bucket/my/key.sif", dest)
         call_args = mock_boto3.client.return_value.download_file.call_args[0]
         assert call_args[0] == "my-bucket"
         assert call_args[1] == "my/key.sif"
+
+    def test_boto3_called_once_per_download(self, tmp_path):
+        dest = tmp_path / "tool.sif"
+        mock_boto3 = self._make_boto3_mock()
+        with patch.dict("sys.modules", {"boto3": mock_boto3}):
+            _fetch_from_s3("s3://bucket/tool.sif", dest)
+        mock_boto3.client.return_value.download_file.assert_called_once()
+
+    def test_boto3_creates_parent_directory(self, tmp_path):
+        dest = tmp_path / "subdir" / "tool.sif"
+        with patch.dict("sys.modules", {"boto3": self._make_boto3_mock()}):
+            _fetch_from_s3("s3://bucket/tool.sif", dest)
+        assert dest.parent.exists()
 
     def test_both_fail_raises_runtime_error(self, tmp_path):
         dest = tmp_path / "tool.sif"

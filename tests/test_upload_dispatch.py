@@ -1,6 +1,8 @@
 # tests/test_upload_dispatch.py
 from __future__ import annotations
 
+from unittest.mock import MagicMock, patch
+
 import pytest
 
 import omni_tool_runtime.upload_result as mod
@@ -112,4 +114,39 @@ def test_upload_dispatch_to_azureblob(monkeypatch: pytest.MonkeyPatch):
 
 def test_upload_unsupported_scheme_raises():
     with pytest.raises(ValueError):
-        mod.upload_to_result_uri(result_uri="gs://bucket/key", data=b"x")
+        mod.upload_to_result_uri(result_uri="ftp://bucket/key", data=b"x")
+
+
+def test_upload_gcs_success():
+    """GCS upload path calls blob.upload_from_string (covers upload_result.py line 161)."""
+    import google.cloud.storage  # ensure importable
+
+    mock_blob = MagicMock()
+    mock_bucket = MagicMock()
+    mock_bucket.blob.return_value = mock_blob
+    mock_client = MagicMock()
+    mock_client.bucket.return_value = mock_bucket
+
+    with patch("google.cloud.storage.Client", return_value=mock_client):
+        mod.upload_to_result_uri(
+            result_uri="gs://mybucket/path/results.json",
+            data=b'{"ok": true}',
+        )
+
+    mock_blob.upload_from_string.assert_called_once_with(
+        b'{"ok": true}', content_type="application/json"
+    )
+
+
+def test_upload_gcs_empty_bucket_raises():
+    """Redundant bucket check (line 149) is exercised by bypassing parse_result_uri."""
+    from omni_tool_runtime.result_uri import ParsedResultURI
+
+    # Patch parse_result_uri inside upload_result to skip its own validation,
+    # then let urlparse("gs:///results.json") produce an empty netloc so line 149 fires.
+    with patch(
+        "omni_tool_runtime.upload_result.parse_result_uri",
+        return_value=ParsedResultURI(scheme="gs", account_or_bucket="", container=None, path=""),
+    ):
+        with pytest.raises(ValueError, match="Invalid gs"):
+            mod.upload_to_result_uri(result_uri="gs:///", data=b"x")

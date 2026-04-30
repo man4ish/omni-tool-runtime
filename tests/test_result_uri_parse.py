@@ -40,9 +40,26 @@ def test_parse_azureblob_uri_requires_container_and_path():
         parse_result_uri("azureblob://acct/container/")
 
 
+def test_parse_gs_uri_ok():
+    p = parse_result_uri("gs://my-bucket/some/prefix/results.json")
+    assert p.scheme == "gs"
+    assert p.account_or_bucket == "my-bucket"
+    assert p.container is None
+    assert p.path == "some/prefix/results.json"
+
+
+def test_parse_gs_uri_requires_bucket_and_key():
+    with pytest.raises(ValueError):
+        parse_result_uri("gs://")
+    with pytest.raises(ValueError):
+        parse_result_uri("gs://bucket-only")
+    with pytest.raises(ValueError):
+        parse_result_uri("gs://bucket/")
+
+
 def test_parse_rejects_unknown_scheme():
     with pytest.raises(ValueError, match="Unsupported"):
-        parse_result_uri("gs://bucket/key")  # not supported yet
+        parse_result_uri("ftp://bucket/key")  # ftp is not supported
 
 
 def test_parse_rejects_missing_scheme():
