@@ -38,4 +38,11 @@ def parse_result_uri(uri: str) -> ParsedResultURI:
             scheme="azureblob", account_or_bucket=account, container=container, path=blob_path
         )
 
+    if u.scheme == "gs":
+        bucket = u.netloc
+        key = u.path.lstrip("/")
+        if not bucket or not key:
+            raise ValueError(f"Invalid gs:// URI: {uri}")
+        return ParsedResultURI(scheme="gs", account_or_bucket=bucket, container=None, path=key)
+
     raise ValueError(f"Unsupported RESULT_URI scheme {u.scheme!r}: {uri}")

@@ -38,7 +38,8 @@ def _fetch_sif(sif_uri: str, cache_dir: Path) -> Path:
     # ✅ If local path doesn't exist but SIF_BASE is set
     # → rewrite to S3/Azure URI automatically
     sif_base = _env("SIF_BASE", "").strip()
-    if sif_base and not uri.startswith("s3://") and not uri.startswith("azureblob://"):
+    _cloud = ("s3://", "azureblob://", "gs://")
+    if sif_base and not any(uri.startswith(p) for p in _cloud):
         if not Path(uri).exists():
             # Extract just the filename
             sif_name = Path(uri).name
@@ -46,7 +47,7 @@ def _fetch_sif(sif_uri: str, cache_dir: Path) -> Path:
             print(f"[generic_sif_runner] local SIF not found, using: {uri}")
 
     # Local path
-    if not uri.startswith("s3://") and not uri.startswith("azureblob://"):
+    if not any(uri.startswith(p) for p in _cloud):
         p = Path(uri)
         if not p.exists():
             raise FileNotFoundError(f"SIF not found: {p}")
@@ -68,6 +69,9 @@ def _fetch_sif(sif_uri: str, cache_dir: Path) -> Path:
 
     elif uri.startswith("azureblob://"):
         _fetch_from_azure(uri, local_path)
+
+    elif uri.startswith("gs://"):
+        _fetch_from_gcs(uri, local_path)
 
     size_mb = local_path.stat().st_size / 1e6
     print(f"[sif_cache] ready: {local_path} ({size_mb:.0f}MB)")
@@ -115,6 +119,24 @@ def _fetch_from_azure(uri: str, dest: Path) -> None:
         dest.write_bytes(bc.download_blob().readall())
     except Exception as e:
         raise RuntimeError(f"Azure Blob download failed for {uri}: {e}")
+
+
+def _fetch_from_gcs(uri: str, dest: Path) -> None:
+    try:
+        from google.cloud import storage as gcs_storage
+        from urllib.parse import urlparse
+        u = urlparse(uri)
+        bucket_name = u.netloc
+        blob_path = u.path.lstrip("/")
+        print(f"[sif_cache] gcs download: gs://{bucket_name}/{blob_path} → {dest}")
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        client = gcs_storage.Client()
+        bucket = client.bucket(bucket_name)
+        blob = bucket.blob(blob_path)
+        blob.download_to_filename(str(dest))
+        print(f"[sif_cache] download complete: {dest.stat().st_size / 1e6:.0f}MB")
+    except Exception as e:
+        raise RuntimeError(f"GCS download failed for {uri}: {e}")
 
 
 def _load_tool_def() -> Dict[str, Any]:
@@ -248,18 +270,41 @@ def main() -> int:
     local_inputs = {}
     for key, val in inputs.items():
         if isinstance(val, str) and val.startswith("s3://"):
-            local_file = work_dir / Path(val).name
-            print(f"[generic_sif_runner] downloading input {key}: {val} → {local_file}")
-            try:
-                import boto3
-                from urllib.parse import urlparse
-                u = urlparse(val)
-                boto3.client("s3").download_file(u.netloc, u.path.lstrip("/"), str(local_file))
-                local_inputs[key] = str(local_file)
-                print(f"[generic_sif_runner] downloaded: {local_file}")
-            except Exception as e:
-                print(f"[generic_sif_runner] S3 download failed for {val}: {e}")
-                local_inputs[key] = val
+            from urllib.parse import urlparse
+            import boto3
+            u = urlparse(val)
+            bucket = u.netloc
+            key_path = u.path.lstrip("/")
+            # Check if directory (ends with /) or single file
+            if val.endswith("/") or not Path(u.path).suffix:
+                # Download directory
+                local_dir = work_dir / Path(key_path.rstrip("/")).name
+                local_dir.mkdir(parents=True, exist_ok=True)
+                print(f"[generic_sif_runner] downloading dir {key}: {val} → {local_dir}")
+                try:
+                    s3 = boto3.client("s3")
+                    paginator = s3.get_paginator("list_objects_v2")
+                    for page in paginator.paginate(Bucket=bucket, Prefix=key_path):
+                        for obj in page.get("Contents", []):
+                            obj_key = obj["Key"]
+                            fname = Path(obj_key).name
+                            if fname:
+                                s3.download_file(bucket, obj_key, str(local_dir / fname))
+                                print(f"[generic_sif_runner] downloaded: {fname}")
+                    local_inputs[key] = str(local_dir)
+                except Exception as e:
+                    print(f"[generic_sif_runner] S3 dir download failed: {e}")
+                    local_inputs[key] = val
+            else:
+                local_file = work_dir / Path(val).name
+                print(f"[generic_sif_runner] downloading input {key}: {val} → {local_file}")
+                try:
+                    boto3.client("s3").download_file(bucket, key_path, str(local_file))
+                    local_inputs[key] = str(local_file)
+                    print(f"[generic_sif_runner] downloaded: {local_file}")
+                except Exception as e:
+                    print(f"[generic_sif_runner] S3 download failed for {val}: {e}")
+                    local_inputs[key] = val
         elif isinstance(val, str) and val.startswith("azureblob://"):
             local_file = work_dir / Path(val).name
             print(f"[generic_sif_runner] downloading input {key}: {val} → {local_file}")
@@ -287,6 +332,24 @@ def main() -> int:
             except Exception as e:
                 print(f"[generic_sif_runner] Azure download failed for {val}: {e}")
                 local_inputs[key] = val
+        elif isinstance(val, str) and val.startswith("gs://"):
+            local_file = work_dir / Path(val).name
+            print(f"[generic_sif_runner] downloading input {key}: {val} → {local_file}")
+            try:
+                from google.cloud import storage as gcs_storage
+                from urllib.parse import urlparse
+                u = urlparse(val)
+                bucket_name = u.netloc
+                blob_path = u.path.lstrip("/")
+                gcs_client = gcs_storage.Client()
+                bucket = gcs_client.bucket(bucket_name)
+                blob = bucket.blob(blob_path)
+                blob.download_to_filename(str(local_file))
+                local_inputs[key] = str(local_file)
+                print(f"[generic_sif_runner] downloaded: {local_file}")
+            except Exception as e:
+                print(f"[generic_sif_runner] GCS download failed for {val}: {e}")
+                local_inputs[key] = val        
         else:
             local_inputs[key] = val
     inputs = local_inputs
@@ -378,15 +441,37 @@ def main() -> int:
 
     # ── Upload result ─────────────────────────────────────────
     if result_uri:
-        upload_to_result_uri(
-            result_uri=result_uri,
-            content=body,
-            content_type="application/json",
-            aws_profile=_env("AWS_PROFILE") or None,
-            azure_auth=_env("AZURE_AUTH", "managed_identity"),
-            azure_connection_string=_env("AZURE_STORAGE_CONNECTION_STRING") or None,
-        )
-        print(f"[generic_sif_runner] uploaded → {result_uri}")
+        if result_uri.startswith("gs://"):
+            from google.cloud import storage as gcs_storage
+            from urllib.parse import urlparse
+
+            u = urlparse(result_uri)
+            bucket_name = u.netloc
+            blob_path = u.path.lstrip("/")
+
+            print(f"[gcs] upload → gs://{bucket_name}/{blob_path}")
+
+            client = gcs_storage.Client()
+            bucket = client.bucket(bucket_name)
+            blob = bucket.blob(blob_path)
+
+            blob.upload_from_string(
+                body,
+                content_type="application/json"
+            )
+
+            print(f"[generic_sif_runner] uploaded → {result_uri}")
+
+        else:
+            upload_to_result_uri(
+                result_uri=result_uri,
+                content=body,
+                content_type="application/json",
+                aws_profile=_env("AWS_PROFILE") or None,
+                azure_auth=_env("AZURE_AUTH", "managed_identity"),
+                azure_connection_string=_env("AZURE_STORAGE_CONNECTION_STRING") or None,
+            )
+            print(f"[generic_sif_runner] uploaded → {result_uri}")
 
     return 0 if ok else 1
 

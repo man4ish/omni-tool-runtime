@@ -141,4 +141,23 @@ def upload_to_result_uri(
         )
         return
 
+    if scheme == "gs":
+        u = urlparse(normalized_uri)
+        bucket_name = u.netloc
+        blob_path = u.path.lstrip("/")
+        if not bucket_name or not blob_path:
+            raise ValueError(f"Invalid gs:// URI (empty bucket/path): {normalized_uri}")
+        try:
+            from google.cloud import storage as gcs_storage
+        except ImportError as exc:
+            raise RuntimeError(
+                "google-cloud-storage not installed. "
+                "Run: pip install google-cloud-storage"
+            ) from exc
+        client = gcs_storage.Client()
+        bucket = client.bucket(bucket_name)
+        blob = bucket.blob(blob_path)
+        blob.upload_from_string(payload, content_type=content_type)
+        return
+
     raise ValueError(f"Unsupported RESULT_URI scheme: {scheme}")
